@@ -1,0 +1,21 @@
+"D:\Program Files (x86)\IAR\arm\bin\armproc.dll" 
+
+"D:\Program Files (x86)\IAR\arm\bin\armstlink2.dll" 
+
+"D:\Files\em\projects\EWARM\projects\Exe\projects.out" 
+
+--plugin="D:\Program Files (x86)\IAR\arm\bin\armbat.dll" 
+
+--device_macro="D:\Program Files (x86)\IAR\arm\config\debugger\ST\STM32F7xx.dmac" 
+
+--device_macro="D:\Program Files (x86)\IAR\arm\config\debugger\ST\STM32F7xx_DBG.dmac" 
+
+--device_macro="D:\Program Files (x86)\IAR\arm\config\debugger\ST\STM32F7xx_OB.dmac" 
+
+--device_macro="D:\Program Files (x86)\IAR\arm\config\debugger\ST\STM32F7xx_TRACE.dmac" 
+
+--flash_loader="D:\Program Files (x86)\IAR\arm\config\flashloader\ST\FlashSTM32F74xxG.board" 
+
+
+
+

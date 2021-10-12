@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "Inc",
+                "Drivers/STM32F7xx_HAL_Driver/Inc",
+                "Drivers/STM32F7xx_HAL_Driver/Inc/Legacy",
+                "Drivers/CMSIS/Device/ST/STM32F7xx/Include",
+                "Drivers/CMSIS/Include",
+                "${workspaceFolder}/Middlewares/ST/STemWin/inc",
+                "${workspaceFolder}/Include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "USE_HAL_DRIVER",
+                "STM32F746xx"
+            ],
+            "windowsSdkVersion": "10.0.19041.0",
+            "compilerPath": "C:/MinGW/bin/gcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "windows-gcc-x86"
+        }
+    ],
+    "version": 4
+}

@@ -1,3 +1,8 @@
+# Drivers
+/Drivers
+EWARM/projects
+/Middlewares
+
 # Prerequisites
 *.d
 
