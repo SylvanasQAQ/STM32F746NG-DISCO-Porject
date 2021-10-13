@@ -19,6 +19,9 @@
 */
 
 // USER START (Optionally insert additional includes)
+#include <stdlib.h>
+#include "os_time.h"
+#include<stdio.h>
 // USER END
 
 #include "DIALOG.h"
@@ -29,14 +32,52 @@
 *
 **********************************************************************
 */
-#define ID_WINDOW_0 (GUI_ID_USER + 0x00)
-#define ID_LISTWHEEL_0 (GUI_ID_USER + 0x01)
-#define ID_LISTWHEEL_1 (GUI_ID_USER + 0x02)
-#define ID_LISTWHEEL_2 (GUI_ID_USER + 0x03)
-#define ID_TEXT_0 (GUI_ID_USER + 0x04)
+#define ID_WINDOW_0     (GUI_ID_USER + 0x00)
+#define ID_LISTWHEEL_0     (GUI_ID_USER + 0x01)
+#define ID_LISTWHEEL_1     (GUI_ID_USER + 0x02)
+#define ID_LISTWHEEL_2     (GUI_ID_USER + 0x03)
+#define ID_TEXT_0     (GUI_ID_USER + 0x04)
+#define ID_TEXT_1     (GUI_ID_USER + 0x05)
+#define ID_LISTWHEEL_3     (GUI_ID_USER + 0x06)
+#define ID_LISTWHEEL_4     (GUI_ID_USER + 0x07)
+#define ID_BUTTON_0     (GUI_ID_USER + 0x08)
+#define ID_BUTTON_1     (GUI_ID_USER + 0x09)
 
 
 // USER START (Optionally insert additional defines)
+// USER END
+
+/*********************************************************************
+*
+*       Static data
+*
+**********************************************************************
+*/
+
+// USER START (Optionally insert additional static data)
+void MoveToClockWindow(WM_HWIN hWin);
+void ListWheelClickedEffect(GUI_HWIN hItem);
+U8 ListWheelSelectededEffect(GUI_HWIN hItem);
+
+
+extern GUI_HWIN hCurrentWindow;
+extern int time_minute;
+extern int time_hour;
+extern int date_day;
+extern int date_month;
+extern int date_year;
+
+
+static int ListWheelArr[] = {ID_LISTWHEEL_0, ID_LISTWHEEL_1, ID_LISTWHEEL_2, ID_LISTWHEEL_3, ID_LISTWHEEL_4};
+
+static char *_apYear[] = {
+  "1990","1991", "1992", "1993", "1994", "1995", "1996",
+  "1997", "1998", "1999", "2000", "2001", "2002", "2003",
+  "2004", "2005", "2006", "2007", "2008", "2009", "2010",
+  "2011", "2012", "2013", "2014", "2015", "2016", "2017",
+  "2018", "2019", "2020", "2021", "2022", "2023", "2024"
+};
+
 static char *_apMonth[] = {
   "January",
   "February",
@@ -63,25 +104,32 @@ static char *_apDay[] = {
   "29", "30", "31",
 };
 
-static char *_apYear[] = {
-  "1990","1991", "1992", "1993", "1994", "1995", "1996",
-  "1997", "1998", "1999", "2000", "2001", "2002", "2003",
-  "2004", "2005", "2006", "2007", "2008", "2009", "2010",
-  "2011", "2012", "2013", "2014", "2015", "2016", "2017",
-  "2018", "2019", "2020",
+static char * _apHour[] = {
+   "00","01", "02", "03", "04",
+  "05", "06", "07", "08",
+  "09", "10", "11", "12",
+  "13", "14", "15", "16",
+  "17", "18", "19", "20",
+  "21", "22", "23",
 };
-// USER END
 
-/*********************************************************************
-*
-*       Static data
-*
-**********************************************************************
-*/
-
-// USER START (Optionally insert additional static data)
-extern WM_HWIN CreateWindow_Self();
-extern GUI_HWIN hCurrentWindow;
+static char * _apMinute[] = {
+  "00","01", "02", "03", "04",
+  "05", "06", "07", "08",
+  "09", "10", "11", "12",
+  "13", "14", "15", "16",
+  "17", "18", "19", "20",
+  "21", "22", "23", "24",
+  "25", "26", "27", "28",
+  "29", "30", "31", "32",
+  "33", "34", "35", "36",
+  "37", "38", "39", "40",
+  "41", "42", "43", "44",
+  "45", "46", "47", "48",
+  "49", "50", "51", "52",
+  "53", "54", "55", "56",
+  "57", "58", "59", 
+};
 // USER END
 
 /*********************************************************************
@@ -90,10 +138,15 @@ extern GUI_HWIN hCurrentWindow;
 */
 static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { WINDOW_CreateIndirect, "ClockWindow", ID_WINDOW_0, 0, 0, 480, 242, 0, 0x0, 0 },
-  { LISTWHEEL_CreateIndirect, "ListwheelMon", ID_LISTWHEEL_0, 10, 40, 100, 178, 0, 0x0, 0 },
-  { LISTWHEEL_CreateIndirect, "ListwheelDay", ID_LISTWHEEL_1, 120, 40, 40, 178, 0, 0x0, 0 },
-  { LISTWHEEL_CreateIndirect, "ListwheelYear", ID_LISTWHEEL_2, 170, 39, 60, 178, 0, 0x0, 0 },
-  { TEXT_CreateIndirect, "Text", ID_TEXT_0, 75, 14, 80, 20, 0, 0x64, 0 },
+  { LISTWHEEL_CreateIndirect, "ListwheelMon", ID_LISTWHEEL_0, 10, 20, 100, 178, 0, 0x0, 0 },
+  { LISTWHEEL_CreateIndirect, "ListwheelDay", ID_LISTWHEEL_1, 120, 20, 40, 178, 0, 0x0, 0 },
+  { LISTWHEEL_CreateIndirect, "ListwheelYear", ID_LISTWHEEL_2, 170, 20, 60, 178, 0, 0x0, 0 },
+  { TEXT_CreateIndirect, "DateText", ID_TEXT_0, 83, 5, 80, 20, 0, 0x64, 0 },
+  { TEXT_CreateIndirect, "TimeText", ID_TEXT_1, 298, 5, 80, 20, 0, 0x64, 0 },
+  { LISTWHEEL_CreateIndirect, "ListwheelHour", ID_LISTWHEEL_3, 287, 20, 40, 178, 0, 0x0, 0 },
+  { LISTWHEEL_CreateIndirect, "ListwheelMinute", ID_LISTWHEEL_4, 342, 20, 40, 178, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "ConfirmButton", ID_BUTTON_0, 400, 50, 70, 40, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "DiscardButton", ID_BUTTON_1, 400, 124, 70, 40, 0, 0x0, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -137,22 +190,50 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   int     NCode;
   int     Id;
   // USER START (Optionally insert additional variables)
+  WM_HWIN hListWheelMonth = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0);
+  WM_HWIN hListWheelDay = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1);
+  WM_HWIN hListWheelYear = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_2);
+  char    buf[8];
+  U8      index;
+  U32     year;
+  U32     month;
+  U8      dayErrorIndicator = 0;
   // USER END
 
   switch (pMsg->MsgId) {
   case WM_INIT_DIALOG:
     //
-    // Initialization of 'Text'
+    // Initialization of 'DateText'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
     TEXT_SetText(hItem, "Set Date");
     TEXT_SetFont(hItem, GUI_FONT_13HB_ASCII);
     TEXT_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
     TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x008000FF));
+    //
+    // Initialization of 'TimeText'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_1);
+    TEXT_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x008000FF));
+    TEXT_SetFont(hItem, GUI_FONT_13HB_ASCII);
+    TEXT_SetText(hItem, "Set Time");
+    //
+    // Initialization of 'ConfirmButton'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_0);
+    BUTTON_SetText(hItem, "Confirm");
+    BUTTON_SetFont(hItem, GUI_FONT_13B_ASCII);
+    //
+    // Initialization of 'DiscardButton'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1);
+    BUTTON_SetText(hItem, "Discard");
+    BUTTON_SetFont(hItem, GUI_FONT_13B_ASCII);
     // USER START (Optionally insert additional code for further widget initialization)
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 5; i++)
     {
-      hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0 + i);
+      hItem = WM_GetDialogItem(pMsg->hWin, ListWheelArr[i]);
       LISTWHEEL_SetLineHeight(hItem, 34);
       LISTWHEEL_SetSnapPosition(hItem, (178 - 34) / 2);
       LISTWHEEL_SetFont(hItem, GUI_FONT_16B_ASCII);
@@ -173,6 +254,12 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_2);
     for (int i = 0; i < GUI_COUNTOF(_apYear); i++)
       LISTWHEEL_AddString(hItem, *(_apYear + i));
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_3);
+    for (int i = 0; i < GUI_COUNTOF(_apHour); i++)
+      LISTWHEEL_AddString(hItem, *(_apHour + i));
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_4);
+    for (int i = 0; i < GUI_COUNTOF(_apMinute); i++)
+      LISTWHEEL_AddString(hItem, *(_apMinute + i));
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -183,8 +270,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
+        ListWheelClickedEffect(hListWheelMonth);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -194,10 +280,43 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_SEL_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
-        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
-        U8 index = LISTWHEEL_GetPos(hItem);
-        LISTWHEEL_SetSel(hItem, index);
+        month = LISTWHEEL_GetPos(hListWheelMonth) + 1;
+        index = LISTWHEEL_GetPos(hListWheelYear);
+        LISTWHEEL_GetItemText(hListWheelYear, index, buf, 7);
+        year = atoi(buf);
+        switch(month){
+          case 1:
+          case 3:
+          case 5:
+          case 7:
+          case 8:
+          case 10:
+          case 12:
+            break;
+          case 2:
+            if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)){
+              if(LISTWHEEL_GetPos(hListWheelDay) > 29-1){
+                dayErrorIndicator = 1;
+                LISTWHEEL_MoveToPos(hListWheelDay, 0);
+              }
+            }
+            else if(LISTWHEEL_GetPos(hListWheelDay) > 28-1){
+              dayErrorIndicator = 1;
+              LISTWHEEL_MoveToPos(hListWheelDay, 0);
+            }
+            break;
+          default:
+            if(LISTWHEEL_GetPos(hListWheelDay) > 30-1){
+              dayErrorIndicator = 1;
+              LISTWHEEL_MoveToPos(hListWheelDay, 0);
+            }
+            break;
+        }
+        if(dayErrorIndicator){
+          LISTWHEEL_SetSel(hListWheelDay, 0);
+          LISTWHEEL_SetTextColor(hListWheelDay, LISTWHEEL_CI_SEL, 0x007dfe);
+        }
+        ListWheelSelectededEffect(hListWheelMonth);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -208,8 +327,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
+        ListWheelClickedEffect(hListWheelDay);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -218,10 +336,45 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_SEL_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
-        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
-        U8 index = LISTWHEEL_GetPos(hItem);
-        LISTWHEEL_SetSel(hItem, index);
+        month = LISTWHEEL_GetPos(hListWheelMonth) + 1;
+        index = LISTWHEEL_GetPos(hListWheelYear);
+        LISTWHEEL_GetItemText(hListWheelYear, index, buf, 7);
+        year = atoi(buf);
+        index = LISTWHEEL_GetPos(hListWheelDay) + 1;
+        switch(month){
+          case 1:
+          case 3:
+          case 5:
+          case 7:
+          case 8:
+          case 10:
+          case 12:
+            break;
+          case 2:
+            if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)){
+              if(index > 29){
+                dayErrorIndicator = 1;
+                LISTWHEEL_MoveToPos(hListWheelDay, 0);
+              }
+            }
+            else if(index > 28){
+              dayErrorIndicator = 1;
+              LISTWHEEL_MoveToPos(hListWheelDay, 0);
+            }
+            break;
+          default:
+            if(index > 30){
+              dayErrorIndicator = 1;
+              LISTWHEEL_MoveToPos(hListWheelDay, 0);
+            }
+            break;
+        }
+        if(dayErrorIndicator){
+          LISTWHEEL_SetSel(hListWheelDay, 0);
+          LISTWHEEL_SetTextColor(hListWheelDay, LISTWHEEL_CI_SEL, 0x007dfe);
+        }
+        else 
+          ListWheelSelectededEffect(hListWheelDay);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -232,8 +385,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_2);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
+        ListWheelClickedEffect(hListWheelYear);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -242,10 +394,108 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_SEL_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        month = LISTWHEEL_GetPos(hListWheelMonth) + 1;
+        index = LISTWHEEL_GetPos(hListWheelYear);
+        LISTWHEEL_GetItemText(hListWheelYear, index, buf, 7);
+        year = atoi(buf);
+        index = LISTWHEEL_GetPos(hListWheelDay) + 1;
+        if(!((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) && month == 2 && index >= 29){
+          LISTWHEEL_MoveToPos(hListWheelDay, 0);
+          LISTWHEEL_SetSel(hListWheelDay, 0);
+          LISTWHEEL_SetTextColor(hListWheelDay, LISTWHEEL_CI_SEL, 0x007dfe);
+        }
+        ListWheelSelectededEffect(hListWheelYear);
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
+    case ID_LISTWHEEL_3: // Notifications sent by 'ListwheelHour'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        ListWheelClickedEffect(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_3));
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      case WM_NOTIFICATION_SEL_CHANGED:
+        // USER START (Optionally insert code for reacting on notification message)
+        index = ListWheelSelectededEffect(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_3));
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
+    case ID_LISTWHEEL_4: // Notifications sent by 'ListwheelMinute'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        ListWheelClickedEffect(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_4));
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      case WM_NOTIFICATION_SEL_CHANGED:
+        // USER START (Optionally insert code for reacting on notification message)
+        index = ListWheelSelectededEffect(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_4));
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
+    case ID_BUTTON_0: // Notifications sent by 'ConfirmButton'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0);
+        index = LISTWHEEL_GetPos(hItem);
+        date_month = index+1;
+        
+        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1);
+        index = LISTWHEEL_GetPos(hItem);
+        date_day = index+1;
+
         hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_2);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
-        U8 index = LISTWHEEL_GetPos(hItem);
-        LISTWHEEL_SetSel(hItem, index);
+        index = LISTWHEEL_GetPos(hItem);
+        LISTWHEEL_GetItemText(hItem, index, buf, 7);
+        date_year = atoi(buf);
+
+        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_3);
+        index = LISTWHEEL_GetPos(hItem);
+        time_hour = index;
+
+        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_4);
+        index = LISTWHEEL_GetPos(hItem);
+        time_minute = index;
+        
+        updateSysWeekday();
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
+    case ID_BUTTON_1: // Notifications sent by 'DiscardButton'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        MoveToClockWindow(pMsg->hWin);
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -283,6 +533,71 @@ WM_HWIN CreateClockWindow(void) {
 }
 
 // USER START (Optionally insert additional public code)
+
+/**
+ * @brief   完成跳转到 `ClockWindow` 的工作
+ * @param   WM_HWIN hWin
+ * @return  void
+ */
+void MoveToClockWindow(WM_HWIN hWin)
+{
+  WM_HWIN hItem;
+
+  hItem = WM_GetDialogItem(hWin, ID_LISTWHEEL_0);
+  LISTWHEEL_MoveToPos(hItem, date_month - 1);
+  LISTWHEEL_SetSel(hItem, date_month - 1);
+
+  hItem = WM_GetDialogItem(hWin, ID_LISTWHEEL_1);
+  LISTWHEEL_MoveToPos(hItem, date_day - 1);
+  LISTWHEEL_SetSel(hItem, date_day - 1);
+
+  hItem = WM_GetDialogItem(hWin, ID_LISTWHEEL_2);
+  LISTWHEEL_MoveToPos(hItem, date_year - 1990);
+  LISTWHEEL_SetSel(hItem, date_year - 1990);
+
+  hItem = WM_GetDialogItem(hWin, ID_LISTWHEEL_3);
+  LISTWHEEL_MoveToPos(hItem, time_hour);
+  LISTWHEEL_SetSel(hItem, time_hour);
+
+  hItem = WM_GetDialogItem(hWin, ID_LISTWHEEL_4);
+  LISTWHEEL_MoveToPos(hItem, time_minute);
+  LISTWHEEL_SetSel(hItem, time_minute);
+
+  for (int i = 0; i < 5; i++){
+    hItem = WM_GetDialogItem(hWin, ListWheelArr[i]);
+    LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
+    LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
+  }
+}
+
+
+
+/**
+ * @brief   点击 LISTWHEEL 控件时的效果
+ * @param   GUI_HWIN hItem
+ * @return  void 
+ */
+void ListWheelClickedEffect(GUI_HWIN hItem)
+{
+  LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
+}
+
+/**
+ * @brief   选中 LISTWHEEL 控件某个项时的效果
+ * @param   GUI_HWIN hItem
+ * @return  U8    选中的 index 
+ */
+U8 ListWheelSelectededEffect(GUI_HWIN hItem)
+{
+  U8        index;
+
+  LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
+  LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
+  index = LISTWHEEL_GetPos(hItem);
+  LISTWHEEL_SetSel(hItem, index);
+
+  return index;
+}
 // USER END
 
 /*************************** End of file ****************************/

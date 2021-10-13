@@ -30,20 +30,18 @@
 *
 **********************************************************************
 */
-#define ID_WINDOW_0 (GUI_ID_USER + 0x00)
-#define ID_BUTTON_0 (GUI_ID_USER + 0x01)
-#define ID_BUTTON_1 (GUI_ID_USER + 0x02)
-#define ID_BUTTON_2 (GUI_ID_USER + 0x03)
-#define ID_BUTTON_3 (GUI_ID_USER + 0x04)
-#define ID_BUTTON_4 (GUI_ID_USER + 0x05)
-#define ID_BUTTON_5 (GUI_ID_USER + 0x06)
-#define ID_BUTTON_6 (GUI_ID_USER + 0x07)
-#define ID_BUTTON_7 (GUI_ID_USER + 0x08)
+#define ID_WINDOW_0     (GUI_ID_USER + 0x00)
+#define ID_BUTTON_0     (GUI_ID_USER + 0x01)
+#define ID_BUTTON_1     (GUI_ID_USER + 0x02)
+#define ID_BUTTON_2     (GUI_ID_USER + 0x03)
+#define ID_BUTTON_3     (GUI_ID_USER + 0x04)
+#define ID_BUTTON_4     (GUI_ID_USER + 0x05)
+#define ID_BUTTON_5     (GUI_ID_USER + 0x06)
+#define ID_BUTTON_6     (GUI_ID_USER + 0x07)
+#define ID_BUTTON_7     (GUI_ID_USER + 0x08)
 
 
 // USER START (Optionally insert additional defines)
-#define ID_TASKBAR 0x0FF00
-#define ID_HOMEBUTTON_TASKBAR 0x0FF01
 // USER END
 
 /*********************************************************************
@@ -55,6 +53,12 @@
 
 // USER START (Optionally insert additional static data)
 extern GUI_HWIN hClockWindow;
+extern GUI_HWIN hCurrentWindow;
+extern GUI_HWIN hDesktop;
+extern GUI_HWIN hHomeWindow;
+extern GUI_HWIN hAlarmWindow;
+extern GUI_HWIN hTaskBar;
+extern void MoveToClockWindow(WM_HWIN hWin);
 // USER END
 
 /*********************************************************************
@@ -111,6 +115,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         //GUI_EndDialog(hCurrentWindow, 0);
         WM_BringToBottom(hCurrentWindow);
         WM_BringToTop(hCurrentWindow = hClockWindow);
+        MoveToClockWindow(hClockWindow);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -125,6 +130,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
+        WM_BringToBottom(hCurrentWindow);
+        WM_BringToTop(hCurrentWindow = hAlarmWindow);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -254,11 +261,15 @@ WM_HWIN CreateWindow_Self(void);
 
 
 WM_HWIN CreateWindow_Self(void) {
-  WM_HWIN hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
+  WM_HWIN hWin;
+  WM_HWIN hItem;
+  
+  hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
 
-  WM_HWIN hButtonClock = WM_GetDialogItem(hWin, ID_BUTTON_0);
-  BUTTON_SetBitmap(hButtonClock, 0, &bmClock);
-
+  hItem = WM_GetDialogItem(hWin, ID_BUTTON_0);
+  BUTTON_SetBitmap(hItem, 0, &bmClock);
+  hItem = WM_GetDialogItem(hWin, ID_BUTTON_1);
+  BUTTON_SetBitmap(hItem, 0, &bmAlarm);
   return hWin;
 }
 

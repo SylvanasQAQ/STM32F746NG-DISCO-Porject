@@ -52,33 +52,13 @@ extern  WM_HWIN CreateWindow(void);
 void GRAPHICS_MainTask(void) {
 
   /* 2- Create a Window using GUIBuilder */
-  //CreateWindow();
+  CreateWindow();
  
 /* USER CODE BEGIN GRAPHICS_MainTask */
  /* User can implement his graphic application here */
-  extern void checkTouch();
-  extern WM_HWIN CreateWindow_Self(void);
-  extern WM_HWIN CreateTaskBar_Self(void);
-  extern WM_HWIN CreateDesktop(void);
-  extern GUI_HWIN hDesktop;
-  extern GUI_HWIN hCurrentWindow;
-  extern GUI_HWIN hTaskBar;
-  extern GUI_HWIN hHomeWindow;
-  extern GUI_HWIN hClockWindow;
-
-  hDesktop = CreateDesktop();
-  hTaskBar = CreateTaskBar_Self();
-  hClockWindow = CreateClockWindow();
-  hHomeWindow = hCurrentWindow = CreateWindow_Self();
-  WM_AttachWindow(hClockWindow, hDesktop);
-  WM_AttachWindow(hCurrentWindow, hDesktop);
-  WM_BringToTop(hCurrentWindow);
-
-  while(1)
-  {
-    checkTouch();
-    GUI_Delay(80);
-  }
+  /* Hello Word example */
+  for(;;)
+   
 /* USER CODE END GRAPHICS_MainTask */
   while(1)
 {

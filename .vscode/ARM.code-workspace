@@ -9,7 +9,19 @@
 			"main.h": "c",
 			"dialog.h": "c",
 			"gui.h": "c",
-			"resources.h": "c"
+			"resources.h": "c",
+			"functions.h": "c",
+			"string.h": "c",
+			"stdio.h": "c",
+			"stemwin_wrapper.h": "c",
+			"gui_app.h": "c",
+			"gui_private.h": "c",
+			"cmsis_os.h": "c",
+			"guidrv_lin.h": "c",
+			"wm.h": "c",
+			"os_state.h": "c",
+			"freertos.h": "c",
+			"stm32f7xx_hal.h": "c"
 		}
 	}
 }

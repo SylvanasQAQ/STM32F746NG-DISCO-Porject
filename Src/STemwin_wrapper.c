@@ -76,7 +76,6 @@
 #define LCD_LAYER0_FRAME_BUFFER        ((uint32_t)0x20010400) /* LTDC Layer 0 frame buffer */
 
 extern LTDC_HandleTypeDef    hltdc;
-extern volatile GUI_TIMER_TIME OS_TimeMS;
 static          LCD_LayerPropTypedef          layer_prop[GUI_NUM_LAYERS];
 volatile char   TransferInProgress  = 0;
 
@@ -288,10 +287,6 @@ int LCD_X_DisplayDriver(unsigned LayerIndex, unsigned Cmd, void * pData)
   }
   return r; 
 }
-void GRAPHICS_IncTick(void){
-  
-   OS_TimeMS++;
-} 
 
 void GRAPHICS_HW_Init(void)
 { 

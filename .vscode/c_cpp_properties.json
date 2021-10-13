@@ -9,14 +9,18 @@
                 "Drivers/CMSIS/Device/ST/STM32F7xx/Include",
                 "Drivers/CMSIS/Include",
                 "${workspaceFolder}/Middlewares/ST/STemWin/inc",
-                "${workspaceFolder}/Include"
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/IAR/ARM_CM7/r0p1",
+                "${workspaceFolder}/Utilities/include"
             ],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
                 "_UNICODE",
                 "USE_HAL_DRIVER",
-                "STM32F746xx"
+                "STM32F746xx",
+                "__VSCODE"
             ],
             "windowsSdkVersion": "10.0.19041.0",
             "compilerPath": "C:/MinGW/bin/gcc.exe",

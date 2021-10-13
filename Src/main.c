@@ -20,12 +20,12 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include<stdio.h>
-#include "functions.h"
 #include "WM.h"
+#include "os_time.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,12 +50,24 @@ I2C_HandleTypeDef hi2c3;
 
 TIM_HandleTypeDef htim2;
 
+osThreadId_t defaultTaskHandle;
 /* USER CODE BEGIN PV */
+osThreadId_t guiTaskHandle;
+const osThreadAttr_t guiTask_attributes = {
+  .name = "guiTask",
+  .stack_size = 1024 * 2,
+  .priority = (osPriority_t) osPriorityAboveNormal7,
+};
+
 GUI_HWIN hCurrentWindow;
 GUI_HWIN hDesktop;
 GUI_HWIN hHomeWindow;
 GUI_HWIN hClockWindow;
+GUI_HWIN hAlarmWindow;
 GUI_HWIN hTaskBar;
+
+osTimerId_t timer_lcd;
+osTimerId_t timer_taskbar;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -67,30 +79,18 @@ extern void GRAPHICS_HW_Init(void);
 extern void GRAPHICS_Init(void);
 extern void GRAPHICS_MainTask(void);
 static void MX_TIM2_Init(void);
-/* USER CODE BEGIN PFP */
+void StartDefaultTask(void *argument);
 
+/* USER CODE BEGIN PFP */
+extern void updateTaskBarTitle();
+
+static void GUIThread(void * argument);
+static void TouchCheckTimerCallback(void *n);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void checkTouch()
-{
-	uint8_t buf[6];
-	HAL_I2C_Mem_Read(&hi2c3, 0x70, 0x02, 1, buf, 1, 1000);
-	if (buf[0] > 0 && buf[0] < 6)
-	{
-		HAL_I2C_Mem_Read(&hi2c3, 0x70, 0x03, 1, buf, 4, 1000);
-		GUI_TOUCH_StoreState(TOUCH_POS(buf[2], buf[3]), TOUCH_POS(buf[0], buf[1]));
-	}
-	else
-		GUI_TOUCH_StoreState(-1, -1);
-}
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	updateSysTimeBySecond();
-	WM_Paint(hTaskBar);
-}
 /* USER CODE END 0 */
 
 /**
@@ -134,12 +134,55 @@ int main(void)
 
   /* Initialise the graphical stack engine */
   GRAPHICS_Init();
+      
+  osKernelInitialize();
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  timer_lcd = osTimerNew(TouchCheckTimerCallback, osTimerPeriodic, NULL, NULL);
+  osTimerStart(timer_lcd, 40);
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* definition and creation of defaultTask */
+  // const osThreadAttr_t defaultTask_attributes = {
+  //   .name = "defaultTask",
+  //   .priority = (osPriority_t) osPriorityNormal,
+  //   .stack_size = 128
+  // };
+  // defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  guiTaskHandle = osThreadNew(GUIThread, NULL, &guiTask_attributes);
+  /* USER CODE END RTOS_THREADS */
+
+  /* Start scheduler */
+  osKernelStart();
   
-  /* Graphic application */  
-  GRAPHICS_MainTask();
-    
+  /* We should never get here as control is now taken by the scheduler */
+
   /* Infinite loop */
-  for(;;);
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+  }
+  /* USER CODE END 3 */
 }
 
 /**
@@ -385,8 +428,123 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/**
+  * @brief  Timer callback for `TouchCheck` (40 ms)
+  * @param  n: Timer index 
+  * @retval None
+  */
+static void TouchCheckTimerCallback(void *n)
+{  
+  uint8_t buf[6];
+	HAL_I2C_Mem_Read(&hi2c3, 0x70, 0x02, 1, buf, 1, 1000);
+	if (buf[0] > 0 && buf[0] < 6)
+	{
+		HAL_I2C_Mem_Read(&hi2c3, 0x70, 0x03, 1, buf, 4, 1000);
+		GUI_TOUCH_StoreState(TOUCH_POS(buf[2], buf[3]), TOUCH_POS(buf[0], buf[1]));
+	}
+	else
+		GUI_TOUCH_StoreState(-1, -1);
+}
+
+
+/**
+  * @brief  Start GUI task
+  * @param  argument: pointer that is passed to the thread function as start argument.
+  * @retval None
+  */
+static void GUIThread(void * argument)
+{  
+  extern WM_HWIN CreateWindow_Self(void);
+  extern WM_HWIN CreateTaskBar_Self(void);
+  extern WM_HWIN CreateDesktop(void);
+  extern WM_HWIN CreateClockWindow(void);
+  extern WM_HWIN CreateAlarmWindow_Self(void);
+  extern int time_second;
+
+  int second;
+  /* Initialize GUI */
+  GUI_Init();   
+
+  GUI_SetBkColor(GUI_WHITE);
+  GUI_Clear();  
+    
+  hDesktop = CreateDesktop();
+  hTaskBar = CreateTaskBar_Self();
+  hClockWindow = CreateClockWindow();
+  hHomeWindow = CreateWindow_Self();
+  hAlarmWindow = CreateAlarmWindow_Self();
+
+  WM_AttachWindow(hClockWindow, hDesktop);
+  WM_AttachWindow(hHomeWindow, hDesktop);
+  WM_AttachWindow(hAlarmWindow, hDesktop);
+
+  WM_BringToBottom(hClockWindow);
+  WM_BringToBottom(hAlarmWindow);
+  WM_BringToTop(hCurrentWindow = hHomeWindow);
+
+  /* Gui background Task */
+  while(1) {
+    if(second != time_second){
+      second = time_second;
+      updateTaskBarTitle();
+      WM_Paint(hTaskBar);
+    }
+    else
+      GUI_Exec();     /* Do the background work ... Update windows etc.) */
+    vTaskDelay(20);   /* Nothing left to do for the moment ... Idle processing */
+  }
+}
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+  * @brief  Function implementing the defaultTask thread.
+  * @param  argument: Not used 
+  * @retval None
+  */
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(void *argument)
+{
+    
+    
+           
+          
+    
+
+/* Graphic application */  
+  GRAPHICS_MainTask();
+
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END 5 */ 
+}
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM1 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM1) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+  if(htim->Instance == TIM2)
+    updateSysTimeBySecond();
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.

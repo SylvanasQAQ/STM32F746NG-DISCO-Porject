@@ -1196,20 +1196,14 @@
         <group>
             <name>User</name>
             <group>
-                <name>Include</name>
-                <file>
-                    <name>$PROJ_DIR$\..\Include\resources.h</name>
-                </file>
-            </group>
-            <group>
                 <name>STemWin</name>
                 <group>
                     <name>App</name>
                     <file>
-                        <name>$PROJ_DIR$\..\STemWin\App\ClockWindowDLG.c</name>
+                        <name>$PROJ_DIR$\..\STemWin\App\AlarmWindowDLG.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\..\STemWin\App\resources.c</name>
+                        <name>$PROJ_DIR$\..\STemWin\App\ClockWindowDLG.c</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\..\STemWin\App\TaskBarDLG.c</name>
@@ -1220,7 +1214,7 @@
                 </group>
             </group>
             <file>
-                <name>$PROJ_DIR$\..\Src\functions.c</name>
+                <name>$PROJ_DIR$\..\Src\freertos.c</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\GUI_App.c</name>
@@ -1239,6 +1233,9 @@
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\stm32f7xx_hal_msp.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\stm32f7xx_hal_timebase_tim.c</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\stm32f7xx_it.c</name>
@@ -1329,12 +1326,69 @@
     <group>
         <name>Middlewares</name>
         <group>
-            <name>STemWin</name>
+            <name>FreeRTOS</name>
             <file>
-                <name>$PROJ_DIR$\..\Middlewares\ST\STemWin\OS\GUI_X.c</name>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os1.c</name>
             </file>
             <file>
-                <name>$PROJ_DIR$\..\Middlewares\ST\STemWin\Lib\STemWin_CM7_wc32_ot_ARGB.a</name>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os2.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\croutine.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\event_groups.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\portable\MemMang\heap_4.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\list.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\portable\IAR\ARM_CM7\r0p1\port.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\portable\IAR\ARM_CM7\r0p1\portasm.s</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\queue.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\stream_buffer.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\tasks.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\timers.c</name>
+            </file>
+        </group>
+        <group>
+            <name>STemWin</name>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\ST\STemWin\OS\GUI_X_OS.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\ST\STemWin\Lib\STemWin_CM7_OS_wc32_ot_ARGB.a</name>
+            </file>
+        </group>
+    </group>
+    <group>
+        <name>Utilities</name>
+        <group>
+            <name>OS</name>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\OS\os_state.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\OS\os_time.c</name>
+            </file>
+        </group>
+        <group>
+            <name>STemWin</name>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\STemWin\resources.c</name>
             </file>
         </group>
     </group>

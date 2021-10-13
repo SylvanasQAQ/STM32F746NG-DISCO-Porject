@@ -65,7 +65,6 @@ LCD_LayerPropTypedef;
 
 void GRAPHICS_HW_Init(void);
 void GRAPHICS_Init(void);
-void GRAPHICS_IncTick(void);
 #endif /* STEMWIN_WRAPPER_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

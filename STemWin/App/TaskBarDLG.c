@@ -20,7 +20,10 @@
 
 // USER START (Optionally insert additional includes)
 #include "resources.h"
-#include "functions.h"
+#include "os_time.h"
+#include "os_state.h"
+//#undef GUI_ID_USER
+//#define GUI_ID_USER (0x800+0x10)
 // USER END
 
 #include "DIALOG.h"
@@ -31,13 +34,16 @@
 *
 **********************************************************************
 */
-#define ID_WINDOW_0         (GUI_ID_USER + 0x00)
-#define ID_BUTTON_0         (GUI_ID_USER + 0x01)
-#define ID_TEXT_0         (GUI_ID_USER + 0x02)
+#define ID_WINDOW_0     (GUI_ID_USER + 0x00)
+#define ID_BUTTON_0     (GUI_ID_USER + 0x01)
+#define ID_TEXT_0     (GUI_ID_USER + 0x02)
+#define ID_PROGBAR_0     (GUI_ID_USER + 0x03)
+#define ID_PROGBAR_1     (GUI_ID_USER + 0x04)
 
 
 // USER START (Optionally insert additional defines)
-
+//#define GUI_ID_USER 0x800
+void updateTaskBarTitle();
 // USER END
 
 /*********************************************************************
@@ -48,11 +54,11 @@
 */
 
 // USER START (Optionally insert additional static data)
-extern char taskBarTitle[];
-extern void updateSysTimeBySecond();
-extern WM_HWIN hCurrentWindow;
-extern GUI_HWIN hHomeWindow;
+char taskBarTitle[] = "10/11/2021  09:48:00 Mon    Group4  @MianXu @WangHe";
+char taskBarSuffix[] = "    Group4  @MianXu @WangHe";
 
+extern GUI_HWIN hCurrentWindow;
+extern GUI_HWIN hHomeWindow;
 // USER END
 
 /*********************************************************************
@@ -62,7 +68,9 @@ extern GUI_HWIN hHomeWindow;
 static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { WINDOW_CreateIndirect, "TaskBar", ID_WINDOW_0, 0, 0, 480, 30, 0, 0x0, 0 },
   { BUTTON_CreateIndirect, "", ID_BUTTON_0, 450, 0, 30, 30, 0, 0x0, 0 },
-  { TEXT_CreateIndirect, "Title", ID_TEXT_0, 0, 0, 400, 30, 0, 0x64, 0 },
+  { TEXT_CreateIndirect, "Title", ID_TEXT_0, 0, 0, 390, 30, 0, 0x64, 0 },
+  { PROGBAR_CreateIndirect, "CPU", ID_PROGBAR_0, 410, 0, 40, 30, 0, 0x0, 0 },
+  { PROGBAR_CreateIndirect, "Memory", ID_PROGBAR_1, 370, 0, 40, 30, 0, 0x0, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -108,6 +116,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     TEXT_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
     TEXT_SetText(hItem, " ");
     // USER START (Optionally insert additional code for further widget initialization)
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_PROGBAR_0);
+    PROGBAR_SetValue(hItem, 100);
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -138,13 +148,27 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     break;
   // USER START (Optionally insert additional message handling)
   case WM_PAINT:
-  WM_GetClientRect(&Rect);
-  GUI_ClearRectEx(&Rect);
-  GUI_DrawRectEx(&Rect);
-  hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
-  TEXT_SetTextColor(hItem, GUI_YELLOW);
-  TEXT_SetFont(hItem, &GUI_Font16B_ASCII);
-  TEXT_SetText(hItem, taskBarTitle);
+    WM_GetClientRect(&Rect);
+    GUI_ClearRectEx(&Rect);
+    GUI_DrawRectEx(&Rect);
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
+    TEXT_SetTextColor(hItem, GUI_YELLOW);
+    TEXT_SetFont(hItem, &GUI_Font16B_ASCII);
+    TEXT_SetText(hItem, taskBarTitle);
+
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_PROGBAR_0);
+    if(osGetCPUUsage() > 60)
+      PROGBAR_SetBarColor(hItem, 0, GUI_RED);
+    else
+      PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
+    PROGBAR_SetValue(hItem, osGetCPUUsage());
+    
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_PROGBAR_1);
+    if(osGetMemUsage() > 60)
+      PROGBAR_SetBarColor(hItem, 0, GUI_RED);
+    else
+      PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
+    PROGBAR_SetValue(hItem, osGetMemUsage());
   break;
   // USER END
   default:
@@ -172,7 +196,6 @@ WM_HWIN CreateTaskBar(void) {
 }
 
 // USER START (Optionally insert additional public code)
-WM_HWIN CreateTaskBar_Self(void);
 WM_HWIN CreateTaskBar_Self(void) {
   WM_HWIN hWin;
 
@@ -184,6 +207,19 @@ WM_HWIN CreateTaskBar_Self(void) {
 }
 
 
+void updateTaskBarTitle()
+{
+  extern int time_second; 
+  extern int time_minute;
+  extern int time_hour;
+  extern int date_day;
+  extern int date_month;
+  extern int date_year;
+  extern char date_weekday[3];
+
+  sprintf(taskBarTitle, "%02d/%02d/%d  %02d:%02d:%02d %s%s",
+            date_month, date_day, date_year, time_hour, time_minute, time_second, date_weekday, taskBarSuffix);
+}
 // USER END
 
 /*************************** End of file ****************************/
