@@ -121,11 +121,11 @@
                 </option>
                 <option>
                     <name>OGUseCmsis</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>OGUseCmsisDspLib</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>GRuntimeLibThreads</name>
@@ -226,6 +226,8 @@
                     <name>CCDefines</name>
                     <state>USE_HAL_DRIVER</state>
                     <state>STM32F746xx</state>
+                    <state>ARM_MATH_CM7</state>
+                    <state>ARM_MATH_LOOPUNROLL</state>
                 </option>
                 <option>
                     <name>CCPreprocFile</name>
@@ -361,6 +363,7 @@
                     <state>$PROJ_DIR$/../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2</state>
                     <state>$PROJ_DIR$/../Middlewares/Third_Party/FreeRTOS/Source/portable/IAR/ARM_CM7/r0p1</state>
                     <state>$PROJ_DIR$/../Utilities/include</state>
+                    <state>$PROJ_DIR$/../Drivers/CMSIS/DSP/Include</state>
                 </option>
                 <option>
                     <name>CCStdIncCheck</name>
@@ -1062,6 +1065,9 @@
                 <group>
                     <name>App</name>
                     <file>
+                        <name>$PROJ_DIR$\..\STemWin\App\AlarmDialogDLG.c</name>
+                    </file>
+                    <file>
                         <name>$PROJ_DIR$\..\STemWin\App\AlarmWindowDLG.c</name>
                     </file>
                     <file>
@@ -1108,6 +1114,12 @@
         <name>Drivers</name>
         <group>
             <name>CMSIS</name>
+            <group>
+                <name>DSP</name>
+                <file>
+                    <name>$PROJ_DIR$\..\Drivers\CMSIS\Lib\IAR\iar_cortexM7lf_math.a</name>
+                </file>
+            </group>
             <file>
                 <name>$PROJ_DIR$\..\Src\system_stm32f7xx.c</name>
             </file>
@@ -1239,6 +1251,15 @@
     <group>
         <name>Utilities</name>
         <group>
+            <name>Alarm</name>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\Alarm\app_alarm.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\Alarm\app_alarm_thread.c</name>
+            </file>
+        </group>
+        <group>
             <name>OS</name>
             <file>
                 <name>$PROJ_DIR$\..\Utilities\OS\os_state.c</name>
@@ -1249,6 +1270,9 @@
         </group>
         <group>
             <name>STemWin</name>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\STemWin\gui_thread.c</name>
+            </file>
             <file>
                 <name>$PROJ_DIR$\..\Utilities\STemWin\resources.c</name>
             </file>

@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include "os_time.h"
 #include<stdio.h>
+#include "os_threads.h"
+#include "app_alarm.h"
 // USER END
 
 #include "DIALOG.h"
@@ -59,13 +61,6 @@ void MoveToClockWindow(WM_HWIN hWin);
 void ListWheelClickedEffect(GUI_HWIN hItem);
 U8 ListWheelSelectededEffect(GUI_HWIN hItem);
 
-
-extern GUI_HWIN hCurrentWindow;
-extern int time_minute;
-extern int time_hour;
-extern int date_day;
-extern int date_month;
-extern int date_year;
 
 
 static int ListWheelArr[] = {ID_LISTWHEEL_0, ID_LISTWHEEL_1, ID_LISTWHEEL_2, ID_LISTWHEEL_3, ID_LISTWHEEL_4};
@@ -231,6 +226,10 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     BUTTON_SetText(hItem, "Discard");
     BUTTON_SetFont(hItem, GUI_FONT_13B_ASCII);
     // USER START (Optionally insert additional code for further widget initialization)
+    hItem = pMsg->hWin;
+    WINDOW_SetBkColor(hItem, GUI_MAKE_COLOR(0x00E3F5D8));
+
+    
     for (int i = 0; i < 5; i++)
     {
       hItem = WM_GetDialogItem(pMsg->hWin, ListWheelArr[i]);
@@ -477,6 +476,10 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         time_minute = index;
         
         updateSysWeekday();
+
+        for (int i = 0; i < APP_ALARM_NUM; i++)
+          alarm_clearTriggered(&(app_alarm_arr[i]));
+        alarm_triggered = 0;
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -591,10 +594,11 @@ U8 ListWheelSelectededEffect(GUI_HWIN hItem)
 {
   U8        index;
 
-  LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
-  LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
   index = LISTWHEEL_GetPos(hItem);
+  LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
+  LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
   LISTWHEEL_SetSel(hItem, index);
+  LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
 
   return index;
 }

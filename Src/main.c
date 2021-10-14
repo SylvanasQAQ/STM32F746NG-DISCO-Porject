@@ -24,8 +24,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "WM.h"
+#include "os_threads.h"
 #include "os_time.h"
+#include "arm_math.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,25 +50,11 @@ CRC_HandleTypeDef hcrc;
 I2C_HandleTypeDef hi2c3;
 
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 
 osThreadId_t defaultTaskHandle;
 /* USER CODE BEGIN PV */
-osThreadId_t guiTaskHandle;
-const osThreadAttr_t guiTask_attributes = {
-  .name = "guiTask",
-  .stack_size = 1024 * 2,
-  .priority = (osPriority_t) osPriorityAboveNormal7,
-};
-
-GUI_HWIN hCurrentWindow;
-GUI_HWIN hDesktop;
-GUI_HWIN hHomeWindow;
-GUI_HWIN hClockWindow;
-GUI_HWIN hAlarmWindow;
-GUI_HWIN hTaskBar;
-
 osTimerId_t timer_lcd;
-osTimerId_t timer_taskbar;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -79,12 +66,10 @@ extern void GRAPHICS_HW_Init(void);
 extern void GRAPHICS_Init(void);
 extern void GRAPHICS_MainTask(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM3_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-extern void updateTaskBarTitle();
-
-static void GUIThread(void * argument);
 static void TouchCheckTimerCallback(void *n);
 /* USER CODE END PFP */
 
@@ -125,6 +110,7 @@ int main(void)
   MX_I2C3_Init();
   MX_CRC_Init();
   MX_TIM2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
@@ -157,16 +143,10 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  // const osThreadAttr_t defaultTask_attributes = {
-  //   .name = "defaultTask",
-  //   .priority = (osPriority_t) osPriorityNormal,
-  //   .stack_size = 128
-  // };
-  // defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  guiTaskHandle = osThreadNew(GUIThread, NULL, &guiTask_attributes);
+  guiTaskHandle = osThreadNew(gui_thread, NULL, &guiTask_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -244,6 +224,9 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  /** Enables the Clock Security System 
+  */
+  HAL_RCC_EnableCSS();
 }
 
 /**
@@ -369,6 +352,55 @@ static void MX_TIM2_Init(void)
 }
 
 /**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 10800-1;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 10000-1;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 3000;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -385,6 +417,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOI_CLK_ENABLE();
   __HAL_RCC_GPIOJ_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOG, GPIO_PIN_13, GPIO_PIN_RESET);
@@ -445,56 +478,6 @@ static void TouchCheckTimerCallback(void *n)
 	else
 		GUI_TOUCH_StoreState(-1, -1);
 }
-
-
-/**
-  * @brief  Start GUI task
-  * @param  argument: pointer that is passed to the thread function as start argument.
-  * @retval None
-  */
-static void GUIThread(void * argument)
-{  
-  extern WM_HWIN CreateWindow_Self(void);
-  extern WM_HWIN CreateTaskBar_Self(void);
-  extern WM_HWIN CreateDesktop(void);
-  extern WM_HWIN CreateClockWindow(void);
-  extern WM_HWIN CreateAlarmWindow_Self(void);
-  extern int time_second;
-
-  int second;
-  /* Initialize GUI */
-  GUI_Init();   
-
-  GUI_SetBkColor(GUI_WHITE);
-  GUI_Clear();  
-    
-  hDesktop = CreateDesktop();
-  hTaskBar = CreateTaskBar_Self();
-  hClockWindow = CreateClockWindow();
-  hHomeWindow = CreateWindow_Self();
-  hAlarmWindow = CreateAlarmWindow_Self();
-
-  WM_AttachWindow(hClockWindow, hDesktop);
-  WM_AttachWindow(hHomeWindow, hDesktop);
-  WM_AttachWindow(hAlarmWindow, hDesktop);
-
-  WM_BringToBottom(hClockWindow);
-  WM_BringToBottom(hAlarmWindow);
-  WM_BringToTop(hCurrentWindow = hHomeWindow);
-
-  /* Gui background Task */
-  while(1) {
-    if(second != time_second){
-      second = time_second;
-      updateTaskBarTitle();
-      WM_Paint(hTaskBar);
-    }
-    else
-      GUI_Exec();     /* Do the background work ... Update windows etc.) */
-    vTaskDelay(20);   /* Nothing left to do for the moment ... Idle processing */
-  }
-}
-
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -519,7 +502,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    osDelay(1000);
   }
   /* USER CODE END 5 */ 
 }

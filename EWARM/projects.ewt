@@ -1200,6 +1200,9 @@
                 <group>
                     <name>App</name>
                     <file>
+                        <name>$PROJ_DIR$\..\STemWin\App\AlarmDialogDLG.c</name>
+                    </file>
+                    <file>
                         <name>$PROJ_DIR$\..\STemWin\App\AlarmWindowDLG.c</name>
                     </file>
                     <file>
@@ -1246,6 +1249,12 @@
         <name>Drivers</name>
         <group>
             <name>CMSIS</name>
+            <group>
+                <name>DSP</name>
+                <file>
+                    <name>$PROJ_DIR$\..\Drivers\CMSIS\Lib\IAR\iar_cortexM7lf_math.a</name>
+                </file>
+            </group>
             <file>
                 <name>$PROJ_DIR$\..\Src\system_stm32f7xx.c</name>
             </file>
@@ -1377,6 +1386,15 @@
     <group>
         <name>Utilities</name>
         <group>
+            <name>Alarm</name>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\Alarm\app_alarm.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\Alarm\app_alarm_thread.c</name>
+            </file>
+        </group>
+        <group>
             <name>OS</name>
             <file>
                 <name>$PROJ_DIR$\..\Utilities\OS\os_state.c</name>
@@ -1387,6 +1405,9 @@
         </group>
         <group>
             <name>STemWin</name>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\STemWin\gui_thread.c</name>
+            </file>
             <file>
                 <name>$PROJ_DIR$\..\Utilities\STemWin\resources.c</name>
             </file>

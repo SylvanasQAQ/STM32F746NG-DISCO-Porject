@@ -2,18 +2,24 @@
 
 
 // 系统时间-秒
-int time_second = 50; 
+uint32_t time_second = 50; 
 // 系统时间-分
-int time_minute = 59;
+uint32_t time_minute = 59;
 // 系统时间-时
-int time_hour = 23;
+uint32_t time_hour = 23;
 // 系统时间-日
-int date_day = 11;
+uint32_t date_day = 11;
 // 系统时间-月
-int date_month = 10;
+uint32_t date_month = 10;
 // 系统时间-年
-int date_year = 2021;
+uint32_t date_year = 2021;
+// 系统时间-星期
 char date_weekday[3] = "Mon";
+
+// 系统时间-星期, 0 表示星期日，1 表示星期一 ...
+uint32_t date_weekday_index = 0;
+const char *weekday_arr[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+
 
 /**
  * @brief   将系统时间增加一秒，更新 `taskBarTitle`
@@ -127,41 +133,18 @@ void updateSysTimeByDay()
 void updateSysWeekday()
 {
     int year = date_year, month = date_month, c, y, week;
-    if (date_month == 1 || date_month == 2)
+    if (month == 1 || month == 2)
     {
         year--;
         month += 12;
     }
     c = year / 100;
     y = year - c * 100;
-    week = (c / 4) - 2 * c + (y + y / 4) + (13 * (month + 1) / 5) + date_day - 1;
+    week = (c / 4) - 2 * c + (y + y / 4) + (26 * (month + 1) / 10) + date_day - 1;
     while (week < 0)
         week += 7;
+
     week %= 7;
-    switch (week)
-    {
-    case 1:
-        strcpy(date_weekday, "Mon");
-        break;
-    case 2:
-        strcpy(date_weekday, "Tue");
-        break;
-    case 3:
-        strcpy(date_weekday, "Wen");
-        break;
-    case 4:
-        strcpy(date_weekday, "Thu");
-        break;
-    case 5:
-        strcpy(date_weekday, "Fri");
-        break;
-    case 6:
-        strcpy(date_weekday, "Sat");
-        break;
-    case 7:
-        strcpy(date_weekday, "Sun");
-        break;
-    default:
-        break;
-    }
+    date_weekday_index = week;
+    strcpy(date_weekday, weekday_arr[week]);
 }

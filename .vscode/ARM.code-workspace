@@ -21,7 +21,10 @@
 			"wm.h": "c",
 			"os_state.h": "c",
 			"freertos.h": "c",
-			"stm32f7xx_hal.h": "c"
+			"stm32f7xx_hal.h": "c",
+			"os_time.h": "c",
+			"freertosconfig.h": "c",
+			"app_alarm.h": "c"
 		}
 	}
 }

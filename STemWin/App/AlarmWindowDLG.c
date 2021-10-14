@@ -19,6 +19,9 @@
 */
 
 // USER START (Optionally insert additional includes)
+#include <string.h>
+#include <stdio.h>
+#include "app_alarm.h"
 // USER END
 
 #include "DIALOG.h"
@@ -47,6 +50,7 @@
 #define ID_TEXT_2 (GUI_ID_USER + 0x0F)
 #define ID_TEXT_3 (GUI_ID_USER + 0x10)
 #define ID_RADIO_1 (GUI_ID_USER + 0x11)
+#define ID_CHECKBOX_7 (GUI_ID_USER + 0x12)
 
 
 // USER START (Optionally insert additional defines)
@@ -60,6 +64,7 @@
 */
 
 // USER START (Optionally insert additional static data)
+void MoveToAlarmWindow(WM_HWIN hWin);
 // USER END
 
 /*********************************************************************
@@ -85,6 +90,7 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { TEXT_CreateIndirect, "Text", ID_TEXT_2, 224, 85, 30, 20, 0, 0x64, 0 },
   { TEXT_CreateIndirect, "Text", ID_TEXT_3, 332, 85, 30, 20, 0, 0x64, 0 },
   { RADIO_CreateIndirect, "Radio", ID_RADIO_1, 253, 118, 80, 50, 0, 0x1e02, 0 },
+  { CHECKBOX_CreateIndirect, "Checkbox", ID_CHECKBOX_7, 248, 185, 96, 20, 0, 0x0, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -97,6 +103,51 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
 */
 
 // USER START (Optionally insert additional static code)
+static char * _apHour[] = {
+   "00","01", "02", "03", "04",
+  "05", "06", "07", "08",
+  "09", "10", "11", "12",
+  "13", "14", "15", "16",
+  "17", "18", "19", "20",
+  "21", "22", "23",
+};
+
+static char * _apMinute[] = {
+  "00","01", "02", "03", "04",
+  "05", "06", "07", "08",
+  "09", "10", "11", "12",
+  "13", "14", "15", "16",
+  "17", "18", "19", "20",
+  "21", "22", "23", "24",
+  "25", "26", "27", "28",
+  "29", "30", "31", "32",
+  "33", "34", "35", "36",
+  "37", "38", "39", "40",
+  "41", "42", "43", "44",
+  "45", "46", "47", "48",
+  "49", "50", "51", "52",
+  "53", "54", "55", "56",
+  "57", "58", "59", 
+};
+
+static int _OwnerDraw(const WIDGET_ITEM_DRAW_INFO * pDrawItemInfo)
+{
+  GUI_RECT aRect;
+
+  switch (pDrawItemInfo->Cmd) {
+  case WIDGET_ITEM_DRAW_OVERLAY:
+    aRect.x0 = pDrawItemInfo->x0;
+    aRect.x1 = pDrawItemInfo->x1;
+    aRect.y1 = pDrawItemInfo->y1;
+    GUI_SetColor(GUI_GRAY_E7);
+    GUI_DrawLine(aRect.x0, (aRect.y1-19-16)/2, aRect.x1, (aRect.y1-19-16)/2);
+    GUI_DrawLine(aRect.x0, (aRect.y1+19+16)/2, aRect.x1, (aRect.y1+19+16)/2);
+    break;
+  default:
+    return LISTWHEEL_OwnerDraw(pDrawItemInfo);
+  }
+  return 0;
+}
 // USER END
 
 /*********************************************************************
@@ -108,6 +159,9 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   int     NCode;
   int     Id;
   // USER START (Optionally insert additional variables)
+  hItem = WM_GetDialogItem(pMsg->hWin, ID_DROPDOWN_0);
+  U8      alarmIndex = DROPDOWN_GetSel(hItem);
+  alarm_t* pAlarm = &(app_alarm_arr[alarmIndex]); 
   // USER END
 
   switch (pMsg->MsgId) {
@@ -129,37 +183,37 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     // Initialization of 'Checkbox1'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0);
-    CHECKBOX_SetText(hItem, "Mon");
+    CHECKBOX_SetText(hItem, "Sun");
     //
     // Initialization of 'Checkbox2'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_1);
-    CHECKBOX_SetText(hItem, "Tue");
+    CHECKBOX_SetText(hItem, "Mon");
     //
     // Initialization of 'Checkbox3'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_2);
-    CHECKBOX_SetText(hItem, "Wen");
+    CHECKBOX_SetText(hItem, "Tue");
     //
     // Initialization of 'Checkbox4'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_3);
-    CHECKBOX_SetText(hItem, "Thu");
+    CHECKBOX_SetText(hItem, "Wed");
     //
     // Initialization of 'Checkbox5'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_4);
-    CHECKBOX_SetText(hItem, "Fri");
+    CHECKBOX_SetText(hItem, "Thu");
     //
     // Initialization of 'Checkbox6'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_5);
-    CHECKBOX_SetText(hItem, "Sat");
+    CHECKBOX_SetText(hItem, "Fri");
     //
     // Initialization of 'Checkbox7'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_6);
-    CHECKBOX_SetText(hItem, "Sun");
+    CHECKBOX_SetText(hItem, "Sat");
     //
     // Initialization of 'Dropdown'
     //
@@ -175,8 +229,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     // Initialization of 'Radio'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_RADIO_0);
-    RADIO_SetText(hItem, "Enable", 0);
-    RADIO_SetText(hItem, "Disable", 1);
+    RADIO_SetText(hItem, "Enable", 1);
+    RADIO_SetText(hItem, "Disable", 0);
     RADIO_SetFont(hItem, GUI_FONT_16B_ASCII);
     RADIO_SetTextColor(hItem, GUI_MAKE_COLOR(0x000000FF));
     //
@@ -205,11 +259,41 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     // Initialization of 'Radio'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_RADIO_1);
-    RADIO_SetText(hItem, "Periodic", 0);
+    RADIO_SetText(hItem, "Periodic", 1);
     RADIO_SetFont(hItem, GUI_FONT_13HB_ASCII);
     RADIO_SetTextColor(hItem, GUI_MAKE_COLOR(0x00000000));
-    RADIO_SetText(hItem, "Once", 1);
+    RADIO_SetText(hItem, "Once", 0);
+    //
+    // Initialization of 'Checkbox'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_7);
+    CHECKBOX_SetText(hItem, "Light Effect");
+    CHECKBOX_SetFont(hItem, GUI_FONT_16_ASCII);
     // USER START (Optionally insert additional code for further widget initialization)
+    memset(app_alarm_arr, 0, sizeof(alarm_t) * APP_ALARM_NUM);
+
+    for (int i = 0; i < 2; i++)
+    {
+      hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0 + i);
+      LISTWHEEL_SetLineHeight(hItem, 34);
+      LISTWHEEL_SetSnapPosition(hItem, (178 - 34) / 2);
+      LISTWHEEL_SetFont(hItem, GUI_FONT_16B_ASCII);
+      LISTWHEEL_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
+      LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
+      LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
+      LISTWHEEL_SetDeceleration(hItem, 35);
+      LISTWHEEL_SetOwnerDraw(hItem, _OwnerDraw);
+      LISTWHEEL_SetSel(hItem, 0);
+    }
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0);
+    for (int i = 0; i < GUI_COUNTOF(_apHour); i++)
+      LISTWHEEL_AddString(hItem, *(_apHour + i));
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1);
+    for (int i = 0; i < GUI_COUNTOF(_apMinute); i++)
+      LISTWHEEL_AddString(hItem, *(_apMinute + i));
+
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0);
+    SLIDER_SetRange(hItem, 0, 100);
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -228,6 +312,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        if(CHECKBOX_GetState(hItem))
+          pAlarm->weekday |= 1 << ((Id) - ID_CHECKBOX_0);
+        else
+          pAlarm->weekday &= ~(1 << ((Id) - ID_CHECKBOX_0));
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -246,6 +335,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        if(CHECKBOX_GetState(hItem))
+          pAlarm->weekday |= 1 << ((Id) - ID_CHECKBOX_0);
+        else
+          pAlarm->weekday &= ~(1 << ((Id) - ID_CHECKBOX_0));
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -264,6 +358,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        if(CHECKBOX_GetState(hItem))
+          pAlarm->weekday |= 1 << ((Id) - ID_CHECKBOX_0);
+        else
+          pAlarm->weekday &= ~(1 << ((Id) - ID_CHECKBOX_0));
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -282,6 +381,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        if(CHECKBOX_GetState(hItem))
+          pAlarm->weekday |= 1 << ((Id) - ID_CHECKBOX_0);
+        else
+          pAlarm->weekday &= ~(1 << ((Id) - ID_CHECKBOX_0));
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -300,6 +404,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        if(CHECKBOX_GetState(hItem))
+          pAlarm->weekday |= 1 << ((Id) - ID_CHECKBOX_0);
+        else
+          pAlarm->weekday &= ~(1 << ((Id) - ID_CHECKBOX_0));
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -318,6 +427,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        if(CHECKBOX_GetState(hItem))
+          pAlarm->weekday |= 1 << ((Id) - ID_CHECKBOX_0);
+        else
+          pAlarm->weekday &= ~(1 << ((Id) - ID_CHECKBOX_0));
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -336,6 +450,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        if(CHECKBOX_GetState(hItem))
+          pAlarm->weekday |= 1 << ((Id) - ID_CHECKBOX_0);
+        else
+          pAlarm->weekday &= ~(1 << ((Id) - ID_CHECKBOX_0));
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -346,6 +465,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -354,6 +475,13 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_SEL_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
+        LISTWHEEL_SetSel(hItem, LISTWHEEL_GetPos(hItem));
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
+
+        pAlarm->hour = LISTWHEEL_GetPos(hItem);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -364,6 +492,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -372,6 +502,13 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_SEL_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
+        LISTWHEEL_SetSel(hItem, LISTWHEEL_GetPos(hItem));
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
+
+        pAlarm->minute = LISTWHEEL_GetPos(hItem);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -390,6 +527,43 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_SEL_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        pAlarm = &(app_alarm_arr[DROPDOWN_GetSel(WM_GetDialogItem(pMsg->hWin, Id))]);
+
+        for (int i = 0; i < 7; i++)
+        {
+          hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0 + i);
+          if (pAlarm->weekday & (APP_ALARM_MONDAY << i))
+            CHECKBOX_Check(hItem);
+          else
+            CHECKBOX_Uncheck(hItem);
+        }
+
+        hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_7);
+        if (alarm_isLightEffect(pAlarm))
+          CHECKBOX_Check(hItem);
+        else
+          CHECKBOX_Uncheck(hItem);
+
+        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0);
+        LISTWHEEL_MoveToPos(hItem, pAlarm->hour);
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
+        LISTWHEEL_SetSel(hItem, pAlarm->hour);
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
+        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1);
+        LISTWHEEL_MoveToPos(hItem, pAlarm->minute);
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
+        LISTWHEEL_SetSel(hItem, pAlarm->minute);
+        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
+
+        hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0);
+        SLIDER_SetValue(hItem, pAlarm->alarmVolume);
+
+        hItem = WM_GetDialogItem(pMsg->hWin, ID_RADIO_0);
+        RADIO_SetValue(hItem, alarm_isEnabled(pAlarm) == 0 ? 0 : 1);
+        hItem = WM_GetDialogItem(pMsg->hWin, ID_RADIO_1);
+        RADIO_SetValue(hItem, alarm_isPeriodic(pAlarm) == 0 ? 0 : 1);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -408,6 +582,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        if(RADIO_GetValue(hItem))
+          alarm_setEnabled(pAlarm);
+        else
+          alarm_clearEnabled(pAlarm);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -426,6 +605,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        pAlarm->alarmVolume = SLIDER_GetValue(hItem);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -444,6 +625,46 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        if(RADIO_GetValue(hItem)){
+          pAlarm->property |= APP_ALARM_PERIODIC;
+          for(int i = 0; i < 7; i++){
+            hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0 + i);
+            WM_EnableWindow(hItem);
+          }
+        }
+        else{
+          pAlarm->property &= ~APP_ALARM_PERIODIC;
+          pAlarm->weekday = 0;
+          for(int i = 0; i < 7; i++){
+            hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0 + i);
+            CHECKBOX_Uncheck(hItem);
+            WM_DisableWindow(hItem);
+          }
+        }
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
+    case ID_CHECKBOX_7: // Notifications sent by 'Checkbox'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      case WM_NOTIFICATION_VALUE_CHANGED:
+        // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        if(CHECKBOX_GetState(hItem))
+          alarm_setLightEffect(pAlarm);
+        else
+          alarm_clearLightEffect(pAlarm);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -486,6 +707,22 @@ WM_HWIN CreateAlarmWindow_Self(void) {
 
   hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
   return hWin;
+}
+
+
+
+/**
+ * @brief   完成跳转到 `ClockWindow` 的工作
+ * @param   WM_HWIN hWin
+ * @return  void
+ */
+void MoveToAlarmWindow(WM_HWIN hWin)
+{
+  WM_HWIN hItem;
+
+  // 通过设置 dropdown 触发 DROPDOWM 事件更新控件
+  hItem = WM_GetDialogItem(hWin, ID_DROPDOWN_0);
+  DROPDOWN_SetSel(hItem, DROPDOWN_GetSel(hItem));
 }
 // USER END
 

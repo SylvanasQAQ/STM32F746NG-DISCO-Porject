@@ -19,12 +19,7 @@
 */
 
 // USER START (Optionally insert additional includes)
-#include "resources.h"
-#include "os_time.h"
-#include "os_state.h"
-#include "os_threads.h"
-//#undef GUI_ID_USER
-//#define GUI_ID_USER (0x800+0x10)
+#include "main.h"
 // USER END
 
 #include "DIALOG.h"
@@ -35,18 +30,15 @@
 *
 **********************************************************************
 */
-#define ID_WINDOW_0 (GUI_ID_USER + 0x00)
-#define ID_BUTTON_0 (GUI_ID_USER + 0x01)
-#define ID_TEXT_0 (GUI_ID_USER + 0x02)
-#define ID_PROGBAR_0 (GUI_ID_USER + 0x03)
-#define ID_PROGBAR_1 (GUI_ID_USER + 0x04)
-#define ID_IMAGE_0 (GUI_ID_USER + 0x05)
-#define ID_IMAGE_1 (GUI_ID_USER + 0x06)
+#define ID_FRAMEWIN_0 (GUI_ID_USER + 0x00)
+#define ID_TEXT_0 (GUI_ID_USER + 0x01)
+#define ID_BUTTON_0 (GUI_ID_USER + 0x02)
 
 
 // USER START (Optionally insert additional defines)
-//#define GUI_ID_USER 0x800
-void updateTaskBarTitle();
+extern TIM_HandleTypeDef htim3;
+
+
 // USER END
 
 /*********************************************************************
@@ -57,7 +49,6 @@ void updateTaskBarTitle();
 */
 
 // USER START (Optionally insert additional static data)
-char taskBarTitle[] = "10/11/2021  09:48:00 Mon";
 // USER END
 
 /*********************************************************************
@@ -65,13 +56,9 @@ char taskBarTitle[] = "10/11/2021  09:48:00 Mon";
 *       _aDialogCreate
 */
 static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
-  { WINDOW_CreateIndirect, "TaskBar", ID_WINDOW_0, 0, 0, 480, 30, 0, 0x0, 0 },
-  { BUTTON_CreateIndirect, "", ID_BUTTON_0, 450, 0, 30, 30, 0, 0x0, 0 },
-  { TEXT_CreateIndirect, "Title", ID_TEXT_0, 0, 0, 200, 30, 0, 0x64, 0 },
-  { PROGBAR_CreateIndirect, "CPU", ID_PROGBAR_0, 405, 0, 40, 30, 0, 0x0, 0 },
-  { PROGBAR_CreateIndirect, "Memory", ID_PROGBAR_1, 360, 0, 40, 30, 0, 0x0, 0 },
-  { IMAGE_CreateIndirect, "Image1", ID_IMAGE_0, 280, -1, 30, 30, 0, 0, 0 },
-  { IMAGE_CreateIndirect, "Image2", ID_IMAGE_1, 310, 1, 30, 30, 0, 0, 0 },
+  { FRAMEWIN_CreateIndirect, "AlarmDialog", ID_FRAMEWIN_0, 140, 55, 200, 150, 0, 0x64, 0 },
+  { TEXT_CreateIndirect, "Text", ID_TEXT_0, 0, 0, 186, 62, 0, 0x64, 0 },
+  { BUTTON_CreateIndirect, "Button", ID_BUTTON_0, 52, 82, 80, 30, 0, 0x0, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -95,45 +82,44 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   int     NCode;
   int     Id;
   // USER START (Optionally insert additional variables)
-  GUI_RECT  Rect;
   // USER END
 
   switch (pMsg->MsgId) {
   case WM_INIT_DIALOG:
     //
-    // Initialization of 'TaskBar'
+    // Initialization of 'AlarmDialog'
     //
     hItem = pMsg->hWin;
-    WINDOW_SetBkColor(hItem, GUI_WHITE);
+    FRAMEWIN_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
+    FRAMEWIN_SetFont(hItem, GUI_FONT_20B_ASCII);
+    FRAMEWIN_SetTextColor(hItem, GUI_MAKE_COLOR(0x000000FF));
+    FRAMEWIN_SetText(hItem, "Alarm");
     //
-    // Initialization of ''
-    //
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_0);
-    BUTTON_SetFont(hItem, GUI_FONT_13B_ASCII);
-    //
-    // Initialization of 'Title'
+    // Initialization of 'Text'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
     TEXT_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
-    TEXT_SetText(hItem, " ");
+    TEXT_SetFont(hItem, GUI_FONT_16B_ASCII);
+    TEXT_SetText(hItem, "Alarm is on");
+    //
+    // Initialization of 'Button'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_0);
+    BUTTON_SetFont(hItem, GUI_FONT_13B_ASCII);
+    BUTTON_SetText(hItem, "Close");
     // USER START (Optionally insert additional code for further widget initialization)
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_IMAGE_0);
-    IMAGE_SetBitmap(hItem, &bmAlarm_disable);
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_IMAGE_1);
-    IMAGE_SetBitmap(hItem, &bmMusic_disable);
-    
     // USER END
     break;
   case WM_NOTIFY_PARENT:
     Id    = WM_GetId(pMsg->hWinSrc);
     NCode = pMsg->Data.v;
     switch(Id) {
-    case ID_BUTTON_0: // Notifications sent by ''
+    case ID_BUTTON_0: // Notifications sent by 'Button'
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        WM_BringToBottom(hCurrentWindow);
-        WM_BringToTop(hCurrentWindow = hHomeWindow);
+        HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
+        GUI_EndDialog(pMsg->hWin, 0);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -149,29 +135,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     }
     break;
   // USER START (Optionally insert additional message handling)
-  case WM_PAINT:
-    WM_GetClientRect(&Rect);
-    GUI_ClearRectEx(&Rect);
-    GUI_DrawRectEx(&Rect);
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
-    TEXT_SetTextColor(hItem, GUI_BLUE_98);
-    TEXT_SetFont(hItem, &GUI_Font16B_ASCII);
-    TEXT_SetText(hItem, taskBarTitle);
-
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_PROGBAR_0);
-    if(osGetCPUUsage() > 60)
-      PROGBAR_SetBarColor(hItem, 0, GUI_RED);
-    else
-      PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
-    PROGBAR_SetValue(hItem, osGetCPUUsage());
-    
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_PROGBAR_1);
-    if(osGetMemUsage() > 60)
-      PROGBAR_SetBarColor(hItem, 0, GUI_RED);
-    else
-      PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
-    PROGBAR_SetValue(hItem, osGetMemUsage());
-  break;
   // USER END
   default:
     WM_DefaultProc(pMsg);
@@ -187,33 +150,19 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 */
 /*********************************************************************
 *
-*       CreateTaskBar
+*       CreateAlarmDialog
 */
-WM_HWIN CreateTaskBar(void);
-WM_HWIN CreateTaskBar(void) {
+WM_HWIN CreateAlarmDialog(void);
+WM_HWIN CreateAlarmDialog(void) {
   WM_HWIN hWin;
 
   hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
+  WM_MakeModal(hWin);
+  WM_SetStayOnTop(hWin, 1);
   return hWin;
 }
 
 // USER START (Optionally insert additional public code)
-WM_HWIN CreateTaskBar_Self(void) {
-  WM_HWIN hWin;
-
-  hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
-
-  WM_HWIN hButtonClock = WM_GetDialogItem(hWin, ID_BUTTON_0);
-  BUTTON_SetBitmap(hButtonClock, 0, &bmHome);
-  return hWin;
-}
-
-
-void updateTaskBarTitle()
-{
-  sprintf(taskBarTitle, "%02d/%02d/%d  %02d:%02d:%02d %s",
-            date_month, date_day, date_year, time_hour, time_minute, time_second, date_weekday);
-}
 // USER END
 
 /*************************** End of file ****************************/

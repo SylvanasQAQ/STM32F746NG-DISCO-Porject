@@ -30,15 +30,16 @@
 *
 **********************************************************************
 */
-#define ID_WINDOW_0     (GUI_ID_USER + 0x00)
-#define ID_BUTTON_0     (GUI_ID_USER + 0x01)
-#define ID_BUTTON_1     (GUI_ID_USER + 0x02)
-#define ID_BUTTON_2     (GUI_ID_USER + 0x03)
-#define ID_BUTTON_3     (GUI_ID_USER + 0x04)
-#define ID_BUTTON_4     (GUI_ID_USER + 0x05)
-#define ID_BUTTON_5     (GUI_ID_USER + 0x06)
-#define ID_BUTTON_6     (GUI_ID_USER + 0x07)
-#define ID_BUTTON_7     (GUI_ID_USER + 0x08)
+#define ID_WINDOW_0 (GUI_ID_USER + 0x00)
+#define ID_BUTTON_0 (GUI_ID_USER + 0x01)
+#define ID_BUTTON_1 (GUI_ID_USER + 0x02)
+#define ID_BUTTON_2 (GUI_ID_USER + 0x03)
+#define ID_BUTTON_3 (GUI_ID_USER + 0x04)
+#define ID_BUTTON_4 (GUI_ID_USER + 0x05)
+#define ID_BUTTON_5 (GUI_ID_USER + 0x06)
+#define ID_BUTTON_6 (GUI_ID_USER + 0x07)
+#define ID_BUTTON_7 (GUI_ID_USER + 0x08)
+#define ID_TEXT_0 (GUI_ID_USER + 0x09)
 
 
 // USER START (Optionally insert additional defines)
@@ -58,7 +59,10 @@ extern GUI_HWIN hDesktop;
 extern GUI_HWIN hHomeWindow;
 extern GUI_HWIN hAlarmWindow;
 extern GUI_HWIN hTaskBar;
+
+
 extern void MoveToClockWindow(WM_HWIN hWin);
+extern void MoveToAlarmWindow(WM_HWIN hWin);
 // USER END
 
 /*********************************************************************
@@ -75,6 +79,7 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { BUTTON_CreateIndirect, "", ID_BUTTON_5, 150, 130, 70, 70, 0, 0x0, 0 },
   { BUTTON_CreateIndirect, "", ID_BUTTON_6, 260, 130, 70, 70, 0, 0x0, 0 },
   { BUTTON_CreateIndirect, "", ID_BUTTON_7, 370, 130, 70, 70, 0, 0x0, 0 },
+  { TEXT_CreateIndirect, "Text", ID_TEXT_0, 140, 222, 200, 20, 0, 0x64, 0 },
   // USER START (Optionally insert additional widgets)
   
   // USER END
@@ -88,9 +93,6 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
 */
 
 // USER START (Optionally insert additional static code)
-extern WM_HWIN CreateClockWindow();
-extern GUI_HWIN hCurrentWindow;
-
 // USER END
 
 /*********************************************************************
@@ -98,12 +100,27 @@ extern GUI_HWIN hCurrentWindow;
 *       _cbDialog
 */
 static void _cbDialog(WM_MESSAGE * pMsg) {
-  int NCode;
-  int Id;
+  WM_HWIN hItem;
+  int     NCode;
+  int     Id;
   // USER START (Optionally insert additional variables)
   // USER END
 
   switch (pMsg->MsgId) {
+  case WM_INIT_DIALOG:
+    //
+    // Initialization of 'Text'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
+    TEXT_SetFont(hItem, GUI_FONT_16B_ASCII);
+    TEXT_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
+    TEXT_SetText(hItem, "Group4  @MianXu @WangHe");
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x00C08000));
+    // USER START (Optionally insert additional code for further widget initialization)
+    hItem = pMsg->hWin;
+    WINDOW_SetBkColor(hItem, GUI_MAKE_COLOR(0x00AEAEAE));
+    // USER END
+    break;
   case WM_NOTIFY_PARENT:
     Id    = WM_GetId(pMsg->hWinSrc);
     NCode = pMsg->Data.v;
@@ -132,6 +149,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         // USER START (Optionally insert code for reacting on notification message)
         WM_BringToBottom(hCurrentWindow);
         WM_BringToTop(hCurrentWindow = hAlarmWindow);
+        MoveToAlarmWindow(hCurrentWindow);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
