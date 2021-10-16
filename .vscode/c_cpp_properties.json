@@ -13,7 +13,10 @@
                 "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
                 "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
                 "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/IAR/ARM_CM7/r0p1",
-                "${workspaceFolder}/Utilities/include"
+                "${workspaceFolder}/Utilities/include",
+                "Drivers/BSP/STM32746G-Discovery",
+                "Drivers/BSP/Components/Common",
+                "Drivers/BSP/Components/wm8994",
             ],
             "defines": [
                 "_DEBUG",
@@ -21,7 +24,8 @@
                 "_UNICODE",
                 "USE_HAL_DRIVER",
                 "STM32F746xx",
-                "__VSCODE"
+                "__VSCODE",
+                "DMA2D"
             ],
             "windowsSdkVersion": "10.0.19041.0",
             "compilerPath": "C:/MinGW/bin/gcc.exe",

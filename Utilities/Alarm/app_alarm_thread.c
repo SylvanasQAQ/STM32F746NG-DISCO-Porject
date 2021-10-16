@@ -16,9 +16,6 @@ const osThreadAttr_t app_alarmTask_attributes = {
 
 
 
-
-
-
 /*------------------- implementation ----------------------------*/
 void app_alarm_thread(void *argument)
 {
@@ -78,7 +75,7 @@ static void AlarmThread(void *argument)
                 }
                 else if(!alarm_isPeriodic(p))
                 {
-                    p->property &= ~APP_ALARM_ENABLED;          // 若是一次性的闹钟，触发后自动关闭
+                    alarm_clearEnabled(p);          // 若是一次性的闹钟，触发后自动关闭
                     alarm_ifAnyEnabled();                       // 更新 `alarm_enabled` 状态
                     alarm_triggered = 1;
 
@@ -91,12 +88,11 @@ static void AlarmThread(void *argument)
         // 触发闹钟
         if(alarm_triggered)
         {
+            alarm_triggered = 0;
             if(lightEffect)
                 HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
             CreateAlarmDialog();
-            alarm_triggered = 0;
         }
-
 
         // 延时一秒
         vTaskDelay(1000);

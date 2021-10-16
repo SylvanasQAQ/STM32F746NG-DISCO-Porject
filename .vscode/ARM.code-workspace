@@ -24,7 +24,11 @@
 			"stm32f7xx_hal.h": "c",
 			"os_time.h": "c",
 			"freertosconfig.h": "c",
-			"app_alarm.h": "c"
+			"app_alarm.h": "c",
+			"os_threads.h": "c",
+			"stm32746g_discovery_lcd.h": "c",
+			"fonts.h": "c",
+			"audio.C": "c"
 		}
 	}
 }

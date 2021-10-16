@@ -16,12 +16,13 @@ static void updateTaskBarAlarmState(WM_HWIN hAlarmImage);
 
 
 
+
 /*------------------- private variables --------------------------*/
 
 osThreadId_t guiTaskHandle;
 const osThreadAttr_t guiTask_attributes = {
 	.name = "guiTask",
-	.stack_size = 1024 * 2,
+	.stack_size = 1024 * 3,
 	.priority = (osPriority_t)osPriorityHigh,
 };
 
@@ -59,7 +60,7 @@ static void GUIThread(void *argument)
 
 	uint32_t 	second;
 	WM_HWIN 	hHomeText;
-	WM_HWIN 	hAlarmImage;
+	WM_HWIN 	hAlarmState;
 
 	/* Initialize GUI */
 	GUI_Init();
@@ -83,8 +84,9 @@ static void GUIThread(void *argument)
 
 
 	// #define ID_IMAGE_0 (GUI_ID_USER + 0x05)
-	hAlarmImage = WM_GetDialogItem(hTaskBar, GUI_ID_USER + 0x05);
+	hAlarmState = WM_GetDialogItem(hTaskBar, GUI_ID_USER + 0x05);
 	hHomeText = WM_GetDialogItem(hHomeWindow, 0x809);
+
 	
 	/* Gui background Task */
 	while (1)
@@ -97,18 +99,18 @@ static void GUIThread(void *argument)
 			updateTaskBarTitle();
 			
 
-			// 彩虹特效
+			// 在桌面的底部文本使用彩虹特效
 			if (hCurrentWindow == hHomeWindow)
 				rainbowEffect(hHomeText, second);
 			// 更新任务栏闹钟图标
-			updateTaskBarAlarmState(hAlarmImage);
+			updateTaskBarAlarmState(hAlarmState);
 
 
 			WM_Paint(hTaskBar);
 		}
 		else
 			GUI_Exec(); /* Do the background work ... Update windows etc.) */
-		vTaskDelay(30); /* Nothing left to do for the moment ... Idle processing */
+		vTaskDelay(20); /* Nothing left to do for the moment ... Idle processing */
 	}
 }
 
@@ -173,3 +175,6 @@ static void updateTaskBarAlarmState(WM_HWIN hAlarmImage)
 		}
 	}
 }
+
+
+

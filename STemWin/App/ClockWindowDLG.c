@@ -60,6 +60,7 @@
 void MoveToClockWindow(WM_HWIN hWin);
 void ListWheelClickedEffect(GUI_HWIN hItem);
 U8 ListWheelSelectededEffect(GUI_HWIN hItem);
+void ListWheelMoveToEffect(GUI_HWIN hItem, uint8_t pos);
 
 
 
@@ -601,6 +602,23 @@ U8 ListWheelSelectededEffect(GUI_HWIN hItem)
   LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
 
   return index;
+}
+
+
+
+/**
+ * @brief   跳转到 LISTWHEEL 控件某个位置时的效果
+ * @param   GUI_HWIN hItem
+ * @param   uint8_t pos
+ * @return  void 
+ */
+void ListWheelMoveToEffect(GUI_HWIN hItem, uint8_t pos)
+{
+  LISTWHEEL_MoveToPos(hItem, pos);
+  LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
+  LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
+  LISTWHEEL_SetSel(hItem, pos);
+  LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
 }
 // USER END
 

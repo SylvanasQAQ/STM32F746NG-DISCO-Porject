@@ -27,6 +27,7 @@
 #include "os_threads.h"
 #include "os_time.h"
 #include "arm_math.h"
+#include "cmsis_os2.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -71,6 +72,7 @@ void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 static void TouchCheckTimerCallback(void *n);
+static void MPU_Config(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -85,9 +87,18 @@ static void TouchCheckTimerCallback(void *n);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+  /* Configure the MPU attributes */
+  MPU_Config();
 
+  /* Invalidate I-Cache : ICIALLU register */
+  /* Enable branch prediction */
+  SCB->CCR |= (1 << 18);
+   __DSB();
   /* USER CODE END 1 */
   
+
+  /* Enable I-Cache---------------------------------------------------------*/
+  SCB_EnableICache();
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -113,6 +124,7 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
+  BSP_SDRAM_Init();
   /* USER CODE END 2 */
 
 /* Initialise the graphical hardware */
@@ -143,6 +155,12 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
+  const osThreadAttr_t defaultTask_attributes = {
+    .name = "defaultTask",
+    .priority = (osPriority_t) osPriorityNormal,
+    .stack_size = 1024
+  };
+  //defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -186,7 +204,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 25;
-  RCC_OscInitStruct.PLL.PLLN = 432;
+  RCC_OscInitStruct.PLL.PLLN = 400;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -208,7 +226,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_7) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_6) != HAL_OK)
   {
     Error_Handler();
   }
@@ -276,7 +294,7 @@ static void MX_I2C3_Init(void)
 
   /* USER CODE END I2C3_Init 1 */
   hi2c3.Instance = I2C3;
-  hi2c3.Init.Timing = 0x6000030D;
+  hi2c3.Init.Timing = 0x00401959;
   hi2c3.Init.OwnAddress1 = 0;
   hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -325,7 +343,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 10800-1;
+  htim2.Init.Prescaler = 10000-1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 10000-1;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -370,7 +388,7 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 10800-1;
+  htim3.Init.Prescaler = 10000-1;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 10000-1;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -410,10 +428,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOK_CLK_ENABLE();
+  __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOI_CLK_ENABLE();
   __HAL_RCC_GPIOJ_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
@@ -478,6 +499,41 @@ static void TouchCheckTimerCallback(void *n)
 	else
 		GUI_TOUCH_StoreState(-1, -1);
 }
+
+
+/**
+  * @brief  Configure the MPU attributes as Normal Non Cacheable for SRAM1/2.
+  * @note   The Base Address is 0x20010000 since this memory interface is the AXI.
+  *         The Region Size is 256KB, it is related to SRAM1 and SRAM2  memory size.
+  * @param  None
+  * @retval None
+  */
+static void MPU_Config(void)
+{
+  MPU_Region_InitTypeDef MPU_InitStruct;
+  
+  /* Disable the MPU */
+  HAL_MPU_Disable();
+  
+  /* Configure the MPU as Normal Non Cacheable for the SRAM1 and SRAM2 */
+  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+  MPU_InitStruct.BaseAddress = 0x20010000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_256KB;
+  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
+  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
+  MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
+  MPU_InitStruct.Number = MPU_REGION_NUMBER1;
+  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL1;
+  MPU_InitStruct.SubRegionDisable = 0x00;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+  /* Enable the MPU */
+  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+}
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -489,14 +545,10 @@ static void TouchCheckTimerCallback(void *n)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
-    
-    
-           
-          
-    
+
 
 /* Graphic application */  
-  GRAPHICS_MainTask();
+  //GRAPHICS_MainTask();
 
   /* USER CODE BEGIN 5 */
   /* Infinite loop */

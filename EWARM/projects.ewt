@@ -1248,6 +1248,27 @@
     <group>
         <name>Drivers</name>
         <group>
+            <name>BSP</name>
+            <group>
+                <name>Components</name>
+                <file>
+                    <name>$PROJ_DIR$\..\Drivers\BSP\Components\wm8994\wm8994.c</name>
+                </file>
+            </group>
+            <group>
+                <name>STM32746G_DISCOVERY</name>
+                <file>
+                    <name>$PROJ_DIR$\..\Drivers\BSP\STM32746G-Discovery\stm32746g_discovery.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Drivers\BSP\STM32746G-Discovery\stm32746g_discovery_audio.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Drivers\BSP\STM32746G-Discovery\stm32746g_discovery_sdram.c</name>
+                </file>
+            </group>
+        </group>
+        <group>
             <name>CMSIS</name>
             <group>
                 <name>DSP</name>
@@ -1301,6 +1322,9 @@
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_i2c_ex.c</name>
             </file>
             <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_i2s.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_ltdc.c</name>
             </file>
             <file>
@@ -1319,6 +1343,12 @@
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_rcc_ex.c</name>
             </file>
             <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_sai.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_sai_ex.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_sdram.c</name>
             </file>
             <file>
@@ -1328,7 +1358,19 @@
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_tim_ex.c</name>
             </file>
             <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_uart.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_uart_ex.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_usart.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_ll_fmc.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_ll_usart.c</name>
             </file>
         </group>
     </group>
@@ -1393,6 +1435,9 @@
             <file>
                 <name>$PROJ_DIR$\..\Utilities\Alarm\app_alarm_thread.c</name>
             </file>
+        </group>
+        <group>
+            <name>Audio</name>
         </group>
         <group>
             <name>OS</name>

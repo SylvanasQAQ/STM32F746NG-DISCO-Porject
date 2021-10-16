@@ -44,13 +44,14 @@
 #define ID_LISTWHEEL_0 (GUI_ID_USER + 0x09)
 #define ID_LISTWHEEL_1 (GUI_ID_USER + 0x0A)
 #define ID_DROPDOWN_0 (GUI_ID_USER + 0x0B)
-#define ID_RADIO_0 (GUI_ID_USER + 0x0C)
 #define ID_SLIDER_0 (GUI_ID_USER + 0x0D)
 #define ID_TEXT_1 (GUI_ID_USER + 0x0E)
 #define ID_TEXT_2 (GUI_ID_USER + 0x0F)
 #define ID_TEXT_3 (GUI_ID_USER + 0x10)
-#define ID_RADIO_1 (GUI_ID_USER + 0x11)
+#define ID_RADIO_0 (GUI_ID_USER + 0x11)
 #define ID_CHECKBOX_7 (GUI_ID_USER + 0x12)
+#define ID_BUTTON_0 (GUI_ID_USER + 0x13)
+#define ID_BUTTON_1 (GUI_ID_USER + 0x14)
 
 
 // USER START (Optionally insert additional defines)
@@ -64,6 +65,11 @@
 */
 
 // USER START (Optionally insert additional static data)
+extern void ListWheelMoveToEffect(GUI_HWIN hItem, uint8_t pos);
+extern U8 ListWheelSelectededEffect(GUI_HWIN hItem);
+extern void ListWheelClickedEffect(GUI_HWIN hItem);
+
+
 void MoveToAlarmWindow(WM_HWIN hWin);
 // USER END
 
@@ -84,13 +90,14 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { LISTWHEEL_CreateIndirect, "Listwheel", ID_LISTWHEEL_0, 99, 40, 40, 178, 0, 0x0, 0 },
   { LISTWHEEL_CreateIndirect, "Listwheel", ID_LISTWHEEL_1, 154, 40, 40, 178, 0, 0x0, 0 },
   { DROPDOWN_CreateIndirect, "Dropdown", ID_DROPDOWN_0, 390, 30, 80, 21, 0, 0x0, 0 },
-  { RADIO_CreateIndirect, "Radio", ID_RADIO_0, 383, 157, 80, 60, 0, 0x2802, 0 },
   { SLIDER_CreateIndirect, "Slider", ID_SLIDER_0, 233, 70, 120, 20, 0, 0x0, 0 },
   { TEXT_CreateIndirect, "Text", ID_TEXT_1, 240, 40, 100, 20, 0, 0x64, 0 },
   { TEXT_CreateIndirect, "Text", ID_TEXT_2, 224, 85, 30, 20, 0, 0x64, 0 },
   { TEXT_CreateIndirect, "Text", ID_TEXT_3, 332, 85, 30, 20, 0, 0x64, 0 },
-  { RADIO_CreateIndirect, "Radio", ID_RADIO_1, 253, 118, 80, 50, 0, 0x1e02, 0 },
+  { RADIO_CreateIndirect, "Radio", ID_RADIO_0, 253, 118, 80, 50, 0, 0x1e02, 0 },
   { CHECKBOX_CreateIndirect, "Checkbox", ID_CHECKBOX_7, 248, 185, 96, 20, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "ButtonOn", ID_BUTTON_0, 380, 125, 80, 40, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "ButtonOf", ID_BUTTON_1, 380, 185, 80, 40, 0, 0x0, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -226,14 +233,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     DROPDOWN_AddString(hItem, "Alarm5");
     DROPDOWN_SetListHeight(hItem, 100);
     //
-    // Initialization of 'Radio'
-    //
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_RADIO_0);
-    RADIO_SetText(hItem, "Enable", 1);
-    RADIO_SetText(hItem, "Disable", 0);
-    RADIO_SetFont(hItem, GUI_FONT_16B_ASCII);
-    RADIO_SetTextColor(hItem, GUI_MAKE_COLOR(0x000000FF));
-    //
     // Initialization of 'Text'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_1);
@@ -258,7 +257,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     //
     // Initialization of 'Radio'
     //
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_RADIO_1);
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_RADIO_0);
     RADIO_SetText(hItem, "Periodic", 1);
     RADIO_SetFont(hItem, GUI_FONT_13HB_ASCII);
     RADIO_SetTextColor(hItem, GUI_MAKE_COLOR(0x00000000));
@@ -269,6 +268,18 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_7);
     CHECKBOX_SetText(hItem, "Light Effect");
     CHECKBOX_SetFont(hItem, GUI_FONT_16_ASCII);
+    //
+    // Initialization of 'ButtonOn'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_0);
+    BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
+    BUTTON_SetText(hItem, "Turn on");
+    //
+    // Initialization of 'ButtonOf'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1);
+    BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
+    BUTTON_SetText(hItem, "Turn off");
     // USER START (Optionally insert additional code for further widget initialization)
     memset(app_alarm_arr, 0, sizeof(alarm_t) * APP_ALARM_NUM);
 
@@ -465,8 +476,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        hItem = WM_GetDialogItem(pMsg->hWin, Id);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
+        ListWheelClickedEffect(WM_GetDialogItem(pMsg->hWin, Id));
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -475,13 +485,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_SEL_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
-        hItem = WM_GetDialogItem(pMsg->hWin, Id);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
-        LISTWHEEL_SetSel(hItem, LISTWHEEL_GetPos(hItem));
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
-
-        pAlarm->hour = LISTWHEEL_GetPos(hItem);
+        pAlarm->hour = ListWheelSelectededEffect(WM_GetDialogItem(pMsg->hWin, Id));
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -492,8 +496,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        hItem = WM_GetDialogItem(pMsg->hWin, Id);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
+        ListWheelClickedEffect(WM_GetDialogItem(pMsg->hWin, Id));
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -502,13 +505,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_SEL_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
-        hItem = WM_GetDialogItem(pMsg->hWin, Id);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
-        LISTWHEEL_SetSel(hItem, LISTWHEEL_GetPos(hItem));
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
-
-        pAlarm->minute = LISTWHEEL_GetPos(hItem);
+        pAlarm->minute = ListWheelSelectededEffect(WM_GetDialogItem(pMsg->hWin, Id));
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -529,10 +526,40 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         // USER START (Optionally insert code for reacting on notification message)
         pAlarm = &(app_alarm_arr[DROPDOWN_GetSel(WM_GetDialogItem(pMsg->hWin, Id))]);
 
+        if(alarm_isEnabled(pAlarm)){
+          WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_0));
+          WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1));
+        }
+        else{
+          WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1));
+          WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_0));
+        }
+
+        hItem = WM_GetDialogItem(pMsg->hWin, ID_RADIO_0);
+        RADIO_SetValue(hItem, alarm_isPeriodic(pAlarm) == 0 ? 0 : 1);
+
+        if (alarm_isPeriodic(pAlarm))
+        {
+          for (int i = 0; i < 7; i++)
+          {
+            hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0 + i);
+            WM_EnableWindow(hItem);
+          }
+        }
+        else
+        {
+          for (int i = 0; i < 7; i++)
+          {
+            hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0 + i);
+            CHECKBOX_Uncheck(hItem);
+            WM_DisableWindow(hItem);
+          }
+        }
+
         for (int i = 0; i < 7; i++)
         {
           hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0 + i);
-          if (pAlarm->weekday & (APP_ALARM_MONDAY << i))
+          if (pAlarm->weekday & (APP_ALARM_SUNDAY << i))
             CHECKBOX_Check(hItem);
           else
             CHECKBOX_Uncheck(hItem);
@@ -544,49 +571,10 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         else
           CHECKBOX_Uncheck(hItem);
 
-        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0);
-        LISTWHEEL_MoveToPos(hItem, pAlarm->hour);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
-        LISTWHEEL_SetSel(hItem, pAlarm->hour);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
-        hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1);
-        LISTWHEEL_MoveToPos(hItem, pAlarm->minute);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x191919);
-        LISTWHEEL_SetSel(hItem, pAlarm->minute);
-        LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
+        ListWheelMoveToEffect(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0), pAlarm->hour);
+        ListWheelMoveToEffect(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1), pAlarm->minute);
 
-        hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0);
-        SLIDER_SetValue(hItem, pAlarm->alarmVolume);
-
-        hItem = WM_GetDialogItem(pMsg->hWin, ID_RADIO_0);
-        RADIO_SetValue(hItem, alarm_isEnabled(pAlarm) == 0 ? 0 : 1);
-        hItem = WM_GetDialogItem(pMsg->hWin, ID_RADIO_1);
-        RADIO_SetValue(hItem, alarm_isPeriodic(pAlarm) == 0 ? 0 : 1);
-        // USER END
-        break;
-      // USER START (Optionally insert additional code for further notification handling)
-      // USER END
-      }
-      break;
-    case ID_RADIO_0: // Notifications sent by 'Radio'
-      switch(NCode) {
-      case WM_NOTIFICATION_CLICKED:
-        // USER START (Optionally insert code for reacting on notification message)
-        // USER END
-        break;
-      case WM_NOTIFICATION_RELEASED:
-        // USER START (Optionally insert code for reacting on notification message)
-        // USER END
-        break;
-      case WM_NOTIFICATION_VALUE_CHANGED:
-        // USER START (Optionally insert code for reacting on notification message)
-        hItem = WM_GetDialogItem(pMsg->hWin, Id);
-        if(RADIO_GetValue(hItem))
-          alarm_setEnabled(pAlarm);
-        else
-          alarm_clearEnabled(pAlarm);
+        SLIDER_SetValue(WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0), pAlarm->alarmVolume);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -613,7 +601,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       // USER END
       }
       break;
-    case ID_RADIO_1: // Notifications sent by 'Radio'
+    case ID_RADIO_0: // Notifications sent by 'Radio'
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
@@ -671,6 +659,40 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       // USER END
       }
       break;
+    case ID_BUTTON_0: // Notifications sent by 'ButtonOn'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        alarm_setEnabled(pAlarm);
+        WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, Id));
+        WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1));
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
+    case ID_BUTTON_1: // Notifications sent by 'ButtonOf'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        alarm_clearEnabled(pAlarm);
+        WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, Id));
+        WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_0));
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
     // USER START (Optionally insert additional code for further Ids)
     // USER END
     }
@@ -722,7 +744,8 @@ void MoveToAlarmWindow(WM_HWIN hWin)
 
   // 通过设置 dropdown 触发 DROPDOWM 事件更新控件
   hItem = WM_GetDialogItem(hWin, ID_DROPDOWN_0);
-  DROPDOWN_SetSel(hItem, DROPDOWN_GetSel(hItem));
+  DROPDOWN_SetSel(hItem, (DROPDOWN_GetSel(hItem) + 1)%APP_ALARM_NUM);
+  DROPDOWN_SetSel(hItem, (DROPDOWN_GetSel(hItem) + APP_ALARM_NUM - 1)%APP_ALARM_NUM);
 }
 // USER END
 

@@ -73,7 +73,7 @@
 #define COLOR_CONVERSION_0      GUICC_M565
 #define DISPLAY_DRIVER_0        GUIDRV_LIN_16
 
-#define LCD_LAYER0_FRAME_BUFFER        ((uint32_t)0x20010400) /* LTDC Layer 0 frame buffer */
+#define LCD_LAYER0_FRAME_BUFFER        ((uint32_t)0xc0000000) /* LTDC Layer 0 frame buffer */
 
 extern LTDC_HandleTypeDef    hltdc;
 static          LCD_LayerPropTypedef          layer_prop[GUI_NUM_LAYERS];

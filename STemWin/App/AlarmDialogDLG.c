@@ -36,9 +36,6 @@
 
 
 // USER START (Optionally insert additional defines)
-extern TIM_HandleTypeDef htim3;
-
-
 // USER END
 
 /*********************************************************************
@@ -49,6 +46,9 @@ extern TIM_HandleTypeDef htim3;
 */
 
 // USER START (Optionally insert additional static data)
+extern TIM_HandleTypeDef htim3;
+extern void MoveToAlarmWindow(WM_HWIN hWin);
+extern WM_HWIN hAlarmWindow;
 // USER END
 
 /*********************************************************************
@@ -82,6 +82,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   int     NCode;
   int     Id;
   // USER START (Optionally insert additional variables)
+  
   // USER END
 
   switch (pMsg->MsgId) {
@@ -120,6 +121,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         // USER START (Optionally insert code for reacting on notification message)
         HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
         GUI_EndDialog(pMsg->hWin, 0);
+        MoveToAlarmWindow(hAlarmWindow);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:

@@ -104,7 +104,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     // Initialization of 'TaskBar'
     //
     hItem = pMsg->hWin;
-    WINDOW_SetBkColor(hItem, GUI_WHITE);
+    WINDOW_SetBkColor(hItem, GUI_MAKE_COLOR(0xFFFFFFFF));
     //
     // Initialization of ''
     //
@@ -121,7 +121,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     IMAGE_SetBitmap(hItem, &bmAlarm_disable);
     hItem = WM_GetDialogItem(pMsg->hWin, ID_IMAGE_1);
     IMAGE_SetBitmap(hItem, &bmMusic_disable);
-    
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -159,18 +158,18 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     TEXT_SetText(hItem, taskBarTitle);
 
     hItem = WM_GetDialogItem(pMsg->hWin, ID_PROGBAR_0);
+    PROGBAR_SetValue(hItem, osGetCPUUsage());
     if(osGetCPUUsage() > 60)
       PROGBAR_SetBarColor(hItem, 0, GUI_RED);
     else
       PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
-    PROGBAR_SetValue(hItem, osGetCPUUsage());
     
     hItem = WM_GetDialogItem(pMsg->hWin, ID_PROGBAR_1);
+    PROGBAR_SetValue(hItem, osGetMemUsage());
     if(osGetMemUsage() > 60)
       PROGBAR_SetBarColor(hItem, 0, GUI_RED);
     else
       PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
-    PROGBAR_SetValue(hItem, osGetMemUsage());
   break;
   // USER END
   default:

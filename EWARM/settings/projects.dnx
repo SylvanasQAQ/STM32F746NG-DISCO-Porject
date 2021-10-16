@@ -20,7 +20,7 @@
         <LeaveTargetRunning>_ 0</LeaveTargetRunning>
     </StLinkDriver>
     <DebugChecksum>
-        <Checksum>2053758973</Checksum>
+        <Checksum>3048932337</Checksum>
     </DebugChecksum>
     <Exceptions>
         <StopOnUncaught>_ 0</StopOnUncaught>
@@ -38,11 +38,11 @@
     </CallStack>
     <SWOTraceHWSettings>
         <OverrideDefaultClocks>0</OverrideDefaultClocks>
-        <CpuClock>216000000</CpuClock>
+        <CpuClock>200000000</CpuClock>
         <ClockAutoDetect>0</ClockAutoDetect>
         <ClockWanted>2000000</ClockWanted>
         <JtagSpeed>2000000</JtagSpeed>
-        <Prescaler>108</Prescaler>
+        <Prescaler>100</Prescaler>
         <TimeStampPrescIndex>0</TimeStampPrescIndex>
         <TimeStampPrescData>0</TimeStampPrescData>
         <PcSampCYCTAP>1</PcSampCYCTAP>

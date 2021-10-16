@@ -43,6 +43,11 @@ extern "C" {
 #include "FreeRTOS.h"
 #include "FreeRTOSConfig.h"
 #include "task.h"
+    
+#include "stdio.h"
+#include "stm32746g_discovery.h"
+#include "stm32746g_discovery_sdram.h"
+#include "stm32746g_discovery_audio.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -57,7 +62,8 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-
+#define LCD_FRAME_BUFFER          SDRAM_DEVICE_ADDR
+#define SDRAM_WRITE_READ_ADDR        ((uint32_t)(LCD_FRAME_BUFFER + 0x40000))
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
@@ -66,12 +72,15 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+#define HAL_UART_MODULE_ENABLED
+#define HAL_SAI_MODULE_ENABLED
+#define HAL_SDRAM_MODULE_ENABLED
+#define HAL_DMA2D_MODULE_ENABLED
+#define HAL_I2S_MODULE_ENABLED
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN Private defines */
-
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
