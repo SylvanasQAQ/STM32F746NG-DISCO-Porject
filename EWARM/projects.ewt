@@ -18,7 +18,7 @@
                     <analyzeTimeoutEnabled>1</analyzeTimeoutEnabled>
                     <analyzeTimeout>600</analyzeTimeout>
                     <enableParallel>1</enableParallel>
-                    <parallelThreads>2</parallelThreads>
+                    <parallelThreads>4</parallelThreads>
                     <enableFalsePositives>0</enableFalsePositives>
                     <messagesLimitEnabled>1</messagesLimitEnabled>
                     <messagesLimit>100</messagesLimit>
@@ -1206,7 +1206,13 @@
                         <name>$PROJ_DIR$\..\STemWin\App\AlarmWindowDLG.c</name>
                     </file>
                     <file>
+                        <name>$PROJ_DIR$\..\STemWin\App\AudioWindowDLG.c</name>
+                    </file>
+                    <file>
                         <name>$PROJ_DIR$\..\STemWin\App\ClockWindowDLG.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\STemWin\App\FreqAnalysisWindowDLG.c</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\..\STemWin\App\TaskBarDLG.c</name>
@@ -1250,18 +1256,9 @@
         <group>
             <name>BSP</name>
             <group>
-                <name>Components</name>
-                <file>
-                    <name>$PROJ_DIR$\..\Drivers\BSP\Components\wm8994\wm8994.c</name>
-                </file>
-            </group>
-            <group>
                 <name>STM32746G_DISCOVERY</name>
                 <file>
                     <name>$PROJ_DIR$\..\Drivers\BSP\STM32746G-Discovery\stm32746g_discovery.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\Drivers\BSP\STM32746G-Discovery\stm32746g_discovery_audio.c</name>
                 </file>
                 <file>
                     <name>$PROJ_DIR$\..\Drivers\BSP\STM32746G-Discovery\stm32746g_discovery_sdram.c</name>
@@ -1284,6 +1281,12 @@
             <name>STM32F7xx_HAL_Driver</name>
             <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_adc.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_adc_ex.c</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_cortex.c</name>
@@ -1438,6 +1441,12 @@
         </group>
         <group>
             <name>Audio</name>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\Audio\app_audio_thread.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\Audio\app_freq_thread.c</name>
+            </file>
         </group>
         <group>
             <name>OS</name>

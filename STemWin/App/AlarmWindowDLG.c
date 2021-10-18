@@ -724,17 +724,8 @@ WM_HWIN CreateAlarmWindow(void) {
 }
 
 // USER START (Optionally insert additional public code)
-WM_HWIN CreateAlarmWindow_Self(void) {
-  WM_HWIN hWin;
-
-  hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
-  return hWin;
-}
-
-
-
 /**
- * @brief   完成跳转到 `ClockWindow` 的工作
+ * @brief   完成跳转到 `ClockWindow` 的工作——更新一些控件
  * @param   WM_HWIN hWin
  * @return  void
  */

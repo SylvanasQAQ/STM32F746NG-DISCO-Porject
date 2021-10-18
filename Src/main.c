@@ -26,8 +26,6 @@
 /* USER CODE BEGIN Includes */
 #include "os_threads.h"
 #include "os_time.h"
-#include "arm_math.h"
-#include "cmsis_os2.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,6 +43,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc3;
+DMA_HandleTypeDef hdma_adc3;
 
 CRC_HandleTypeDef hcrc;
 
@@ -52,6 +52,8 @@ I2C_HandleTypeDef hi2c3;
 
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
+
+UART_HandleTypeDef huart4;
 
 osThreadId_t defaultTaskHandle;
 /* USER CODE BEGIN PV */
@@ -61,6 +63,7 @@ osTimerId_t timer_lcd;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_I2C3_Init(void);
 static void MX_CRC_Init(void);
 extern void GRAPHICS_HW_Init(void);
@@ -68,6 +71,8 @@ extern void GRAPHICS_Init(void);
 extern void GRAPHICS_MainTask(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_ADC3_Init(void);
+static void MX_UART4_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -77,7 +82,17 @@ static void MPU_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+uint16_t Audio_DMA_Ready;                     // DMA 就绪标志
 
+/**
+  * @brief  ADC3 IN0 �? DMA 完成中断
+  * @param  ADC_HandleTypeDef *hadc
+  * @retval None
+  */
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
+{
+  Audio_DMA_Ready = 1;
+}
 /* USER CODE END 0 */
 
 /**
@@ -118,12 +133,15 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_I2C3_Init();
   MX_CRC_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
+  MX_ADC3_Init();
+  MX_UART4_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Base_Start_IT(&htim3);
   BSP_SDRAM_Init();
   /* USER CODE END 2 */
 
@@ -151,6 +169,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+  
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -158,13 +177,15 @@ int main(void)
   const osThreadAttr_t defaultTask_attributes = {
     .name = "defaultTask",
     .priority = (osPriority_t) osPriorityNormal,
-    .stack_size = 1024
+    .stack_size = 128
   };
-  //defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  osThreadTerminate(defaultTaskHandle);
   guiTaskHandle = osThreadNew(gui_thread, NULL, &guiTask_attributes);
+  //
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -176,6 +197,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    osDelay(100);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -230,13 +252,15 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LTDC|RCC_PERIPHCLK_I2C3;
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LTDC|RCC_PERIPHCLK_UART4
+                              |RCC_PERIPHCLK_I2C3;
   PeriphClkInitStruct.PLLSAI.PLLSAIN = 200;
   PeriphClkInitStruct.PLLSAI.PLLSAIR = 5;
   PeriphClkInitStruct.PLLSAI.PLLSAIQ = 2;
   PeriphClkInitStruct.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV2;
   PeriphClkInitStruct.PLLSAIDivQ = 1;
   PeriphClkInitStruct.PLLSAIDivR = RCC_PLLSAIDIVR_4;
+  PeriphClkInitStruct.Uart4ClockSelection = RCC_UART4CLKSOURCE_PCLK1;
   PeriphClkInitStruct.I2c3ClockSelection = RCC_I2C3CLKSOURCE_PCLK1;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
   {
@@ -245,6 +269,56 @@ void SystemClock_Config(void)
   /** Enables the Clock Security System 
   */
   HAL_RCC_EnableCSS();
+}
+
+/**
+  * @brief ADC3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC3_Init(void)
+{
+
+  /* USER CODE BEGIN ADC3_Init 0 */
+
+  /* USER CODE END ADC3_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC3_Init 1 */
+
+  /* USER CODE END ADC3_Init 1 */
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
+  */
+  hadc3.Instance = ADC3;
+  hadc3.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc3.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc3.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc3.Init.ContinuousConvMode = DISABLE;
+  hadc3.Init.DiscontinuousConvMode = DISABLE;
+  hadc3.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
+  hadc3.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T2_CC2;
+  hadc3.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc3.Init.NbrOfConversion = 1;
+  hadc3.Init.DMAContinuousRequests = ENABLE;
+  hadc3.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  */
+  sConfig.Channel = ADC_CHANNEL_0;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_15CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc3, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC3_Init 2 */
+
+  /* USER CODE END ADC3_Init 2 */
+
 }
 
 /**
@@ -338,14 +412,15 @@ static void MX_TIM2_Init(void)
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM2_Init 1 */
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 10000-1;
+  htim2.Init.Prescaler = 50-1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 10000-1;
+  htim2.Init.Period = 50-1;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -357,9 +432,21 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 10;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -381,6 +468,7 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 0 */
 
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
 
@@ -393,6 +481,15 @@ static void MX_TIM3_Init(void)
   htim3.Init.Period = 10000-1;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
   {
     Error_Handler();
@@ -419,6 +516,57 @@ static void MX_TIM3_Init(void)
 }
 
 /**
+  * @brief UART4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_UART4_Init(void)
+{
+
+  /* USER CODE BEGIN UART4_Init 0 */
+
+  /* USER CODE END UART4_Init 0 */
+
+  /* USER CODE BEGIN UART4_Init 1 */
+
+  /* USER CODE END UART4_Init 1 */
+  huart4.Instance = UART4;
+  huart4.Init.BaudRate = 115200;
+  huart4.Init.WordLength = UART_WORDLENGTH_8B;
+  huart4.Init.StopBits = UART_STOPBITS_1;
+  huart4.Init.Parity = UART_PARITY_NONE;
+  huart4.Init.Mode = UART_MODE_TX_RX;
+  huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN UART4_Init 2 */
+
+  /* USER CODE END UART4_Init 2 */
+
+}
+
+/** 
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void) 
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA2_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA2_Stream1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -433,12 +581,12 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOK_CLK_ENABLE();
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOI_CLK_ENABLE();
   __HAL_RCC_GPIOJ_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOG, GPIO_PIN_13, GPIO_PIN_RESET);
@@ -545,10 +693,14 @@ static void MPU_Config(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
-
+    
+    
+           
+          
+    
 
 /* Graphic application */  
-  //GRAPHICS_MainTask();
+  GRAPHICS_MainTask();
 
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
@@ -576,7 +728,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-  if(htim->Instance == TIM2)
+  if(htim->Instance == TIM3)
     updateSysTimeBySecond();
   /* USER CODE END Callback 1 */
 }

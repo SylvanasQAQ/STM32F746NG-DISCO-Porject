@@ -1,3 +1,10 @@
+/**
+ * @Brief   用于 GUI 的线程
+ * @Dependency  
+ */
+
+
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "os_time.h"
 #include "app_alarm.h"
@@ -6,39 +13,47 @@
 #include "resources.h"
 
 
-/*------------------ private function prototype ------------------*/
-extern void updateTaskBarTitle();
 
-void rainbowEffect(WM_HWIN hItem, int second);
+/* Functions prototypes ---------------------------------------------*/
 static void GUIThread(void *argument);
 static void updateTaskBarAlarmState(WM_HWIN hAlarmImage);
 
+void rainbowEffect(WM_HWIN hItem, int second);
+
+extern void updateTaskBarTitle();
 
 
 
 
-/*------------------- private variables --------------------------*/
 
+
+/* Private variables -----------------------------------------------------------*/
 osThreadId_t guiTaskHandle;
 const osThreadAttr_t guiTask_attributes = {
-	.name = "guiTask",
-	.stack_size = 1024 * 3,
+	.name = "GUI Task",
+	.stack_size = 1024 * 4,
 	.priority = (osPriority_t)osPriorityHigh,
 };
 
 GUI_HWIN hCurrentWindow;
 GUI_HWIN hDesktop;
+GUI_HWIN hTaskBar;
 GUI_HWIN hHomeWindow;
 GUI_HWIN hClockWindow;
 GUI_HWIN hAlarmWindow;
-GUI_HWIN hTaskBar;
+GUI_HWIN hAudioWindow;
+GUI_HWIN hFreqAnalysisWindow;
 
 
 
 
 
-
-/*------------------- implementation ----------------------------*/
+/* Function implementations -----------------------------------------------------------*/
+/**
+  * @brief  GUI Thread 的包装函数，用于 osThreadNew()
+  * @param  void *argument
+  * @retval None
+  */
 void gui_thread(void *argument)
 {
 	GUIThread(argument);
@@ -52,11 +67,13 @@ void gui_thread(void *argument)
  */
 static void GUIThread(void *argument)
 {
-	extern WM_HWIN CreateWindow_Self(void);
-	extern WM_HWIN CreateTaskBar_Self(void);
+	extern WM_HWIN CreateWindow(void);
+	extern WM_HWIN CreateTaskBar(void);
 	extern WM_HWIN CreateDesktop(void);
 	extern WM_HWIN CreateClockWindow(void);
-	extern WM_HWIN CreateAlarmWindow_Self(void);
+	extern WM_HWIN CreateAlarmWindow(void);
+	extern WM_HWIN CreateAudioWindow(void);
+	extern WM_HWIN CreateFreqAnalysisWindow(void);
 
 	uint32_t 	second;
 	WM_HWIN 	hHomeText;
@@ -69,18 +86,20 @@ static void GUIThread(void *argument)
 	GUI_Clear();
 
 	hDesktop = CreateDesktop();
-	hTaskBar = CreateTaskBar_Self();
+	hTaskBar = CreateTaskBar();
 	hClockWindow = CreateClockWindow();
-	hHomeWindow = CreateWindow_Self();
-	hAlarmWindow = CreateAlarmWindow_Self();
+	hHomeWindow = CreateWindow();
+	hAlarmWindow = CreateAlarmWindow();
+	hAudioWindow = CreateAudioWindow();
+	hFreqAnalysisWindow = CreateFreqAnalysisWindow();
 
 	WM_AttachWindow(hClockWindow, hDesktop);
 	WM_AttachWindow(hHomeWindow, hDesktop);
 	WM_AttachWindow(hAlarmWindow, hDesktop);
+	WM_AttachWindow(hAudioWindow, hDesktop);
+	WM_AttachWindow(hFreqAnalysisWindow, hDesktop);
 
-	WM_BringToBottom(hClockWindow);
-	WM_BringToBottom(hAlarmWindow);
-	//WM_BringToTop(hCurrentWindow = hHomeWindow);
+	WM_BringToTop(hCurrentWindow = hHomeWindow);
 
 
 	// #define ID_IMAGE_0 (GUI_ID_USER + 0x05)
@@ -91,6 +110,7 @@ static void GUIThread(void *argument)
 	/* Gui background Task */
 	while (1)
 	{
+		// 每秒执行一次的任务
 		if (second != time_second)
 		{
 			second = time_second;
@@ -113,6 +133,7 @@ static void GUIThread(void *argument)
 		vTaskDelay(20); /* Nothing left to do for the moment ... Idle processing */
 	}
 }
+
 
 /**
  * @brief  Apply rainbow effect to object `hItem`
@@ -153,7 +174,6 @@ void rainbowEffect(WM_HWIN hItem, int second)
 /**
  * @brief  update the alarm state image of taskbar
  * @param  WM_HWIN hItem
- * @param  int second
  * @retval None
  */
 static void updateTaskBarAlarmState(WM_HWIN hAlarmImage)

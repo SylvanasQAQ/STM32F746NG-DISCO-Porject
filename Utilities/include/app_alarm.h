@@ -48,7 +48,6 @@ typedef struct alarm_struct
 /*------------------- externs -------------------*/
 extern alarm_t app_alarm_arr[APP_ALARM_NUM];
 extern uint8_t alarm_enabled;
-extern uint8_t alarm_triggered;
 
 
 /*------------------- PF -------------------*/

@@ -1,5 +1,6 @@
 # Drivers
 /Drivers
+!/Drivers/BSP/STM32746G-Discovery
 EWARM/projects
 /Middlewares
 

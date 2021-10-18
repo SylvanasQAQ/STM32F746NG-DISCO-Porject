@@ -7,8 +7,6 @@ alarm_t app_alarm_arr[APP_ALARM_NUM];
 
 // alarm 开启指示       1 -- 有 alarm 开启， 0 -- 无 alarm 开启
 uint8_t alarm_enabled;
-// alarm 触发指示       1 -- 有 alarm 触发， 0 -- 无 alarm 触发
-uint8_t alarm_triggered;
 
 
 

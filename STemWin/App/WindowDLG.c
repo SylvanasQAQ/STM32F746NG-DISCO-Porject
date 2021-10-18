@@ -59,10 +59,14 @@ extern GUI_HWIN hDesktop;
 extern GUI_HWIN hHomeWindow;
 extern GUI_HWIN hAlarmWindow;
 extern GUI_HWIN hTaskBar;
+extern GUI_HWIN hAudioWindow;
+extern GUI_HWIN hFreqAnalysisWindow;
 
 
 extern void MoveToClockWindow(WM_HWIN hWin);
 extern void MoveToAlarmWindow(WM_HWIN hWin);
+extern void MoveToAudioWindow(WM_HWIN hWin);
+extern void MoveToFreqAnalysisWindows(WM_HWIN hWin);
 // USER END
 
 /*********************************************************************
@@ -119,6 +123,15 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     // USER START (Optionally insert additional code for further widget initialization)
     hItem = pMsg->hWin;
     WINDOW_SetBkColor(hItem, GUI_MAKE_COLOR(0x00AEAEAE));
+
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_0);
+    BUTTON_SetBitmap(hItem, 0, &bmClock);
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1);
+    BUTTON_SetBitmap(hItem, 0, &bmAlarm);
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_2);
+    BUTTON_SetBitmap(hItem, 0, &bmMic);
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_3);
+    BUTTON_SetBitmap(hItem, 0, &bmFreq);
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -129,8 +142,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        //GUI_EndDialog(hCurrentWindow, 0);
-        WM_BringToBottom(hCurrentWindow);
         WM_BringToTop(hCurrentWindow = hClockWindow);
         MoveToClockWindow(hClockWindow);
         // USER END
@@ -147,7 +158,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        WM_BringToBottom(hCurrentWindow);
         WM_BringToTop(hCurrentWindow = hAlarmWindow);
         MoveToAlarmWindow(hCurrentWindow);
         // USER END
@@ -164,6 +174,9 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
+        //WM_BringToBottom(hCurrentWindow);
+        WM_BringToTop(hCurrentWindow = hAudioWindow);
+        MoveToAudioWindow(hCurrentWindow);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -178,6 +191,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
+        WM_BringToTop(hCurrentWindow = hFreqAnalysisWindow);
+        MoveToFreqAnalysisWindow(hCurrentWindow);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -275,22 +290,6 @@ WM_HWIN CreateWindow(void) {
 }
 
 // USER START (Optionally insert additional public code)
-WM_HWIN CreateWindow_Self(void);
-
-
-WM_HWIN CreateWindow_Self(void) {
-  WM_HWIN hWin;
-  WM_HWIN hItem;
-  
-  hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
-
-  hItem = WM_GetDialogItem(hWin, ID_BUTTON_0);
-  BUTTON_SetBitmap(hItem, 0, &bmClock);
-  hItem = WM_GetDialogItem(hWin, ID_BUTTON_1);
-  BUTTON_SetBitmap(hItem, 0, &bmAlarm);
-  return hWin;
-}
-
 WM_HWIN CreateDesktop(void) {
   WM_HWIN hWin = WM_CreateWindow(0, 30, 480, 242, WM_CF_SHOW, 0, 0);
 

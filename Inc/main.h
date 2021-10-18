@@ -38,16 +38,20 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include<stdio.h>
-//#include "GUIDRV_Lin.h"
+
+#include "GUIDRV_Lin.h"
+
 #include "cmsis_os.h"
+#include "cmsis_os2.h"
 #include "FreeRTOS.h"
 #include "FreeRTOSConfig.h"
 #include "task.h"
     
-#include "stdio.h"
 #include "stm32746g_discovery.h"
 #include "stm32746g_discovery_sdram.h"
-#include "stm32746g_discovery_audio.h"
+
+#include "arm_math.h"
+#include "arm_const_structs.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -72,11 +76,6 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-#define HAL_UART_MODULE_ENABLED
-#define HAL_SAI_MODULE_ENABLED
-#define HAL_SDRAM_MODULE_ENABLED
-#define HAL_DMA2D_MODULE_ENABLED
-#define HAL_I2S_MODULE_ENABLED
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

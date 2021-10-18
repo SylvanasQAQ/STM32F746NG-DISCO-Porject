@@ -480,7 +480,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 
         for (int i = 0; i < APP_ALARM_NUM; i++)
           alarm_clearTriggered(&(app_alarm_arr[i]));
-        alarm_triggered = 0;
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -545,33 +544,15 @@ WM_HWIN CreateClockWindow(void) {
  */
 void MoveToClockWindow(WM_HWIN hWin)
 {
-  WM_HWIN hItem;
+  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_0), date_month - 1);
 
-  hItem = WM_GetDialogItem(hWin, ID_LISTWHEEL_0);
-  LISTWHEEL_MoveToPos(hItem, date_month - 1);
-  LISTWHEEL_SetSel(hItem, date_month - 1);
+  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_1), date_day - 1);
 
-  hItem = WM_GetDialogItem(hWin, ID_LISTWHEEL_1);
-  LISTWHEEL_MoveToPos(hItem, date_day - 1);
-  LISTWHEEL_SetSel(hItem, date_day - 1);
+  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_2), date_year - 1990);
 
-  hItem = WM_GetDialogItem(hWin, ID_LISTWHEEL_2);
-  LISTWHEEL_MoveToPos(hItem, date_year - 1990);
-  LISTWHEEL_SetSel(hItem, date_year - 1990);
+  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_3), time_hour);
 
-  hItem = WM_GetDialogItem(hWin, ID_LISTWHEEL_3);
-  LISTWHEEL_MoveToPos(hItem, time_hour);
-  LISTWHEEL_SetSel(hItem, time_hour);
-
-  hItem = WM_GetDialogItem(hWin, ID_LISTWHEEL_4);
-  LISTWHEEL_MoveToPos(hItem, time_minute);
-  LISTWHEEL_SetSel(hItem, time_minute);
-
-  for (int i = 0; i < 5; i++){
-    hItem = WM_GetDialogItem(hWin, ListWheelArr[i]);
-    LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
-    LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
-  }
+  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_4), time_minute);
 }
 
 

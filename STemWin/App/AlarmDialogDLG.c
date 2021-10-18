@@ -119,7 +119,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
+        //HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
+        __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2, 0);
         GUI_EndDialog(pMsg->hWin, 0);
         MoveToAlarmWindow(hAlarmWindow);
         // USER END

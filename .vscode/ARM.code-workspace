@@ -28,7 +28,14 @@
 			"os_threads.h": "c",
 			"stm32746g_discovery_lcd.h": "c",
 			"fonts.h": "c",
-			"audio.C": "c"
+			"audio.C": "c",
+			"hw_init.h": "c",
+			"arm_const_structs.h": "c",
+			"arm_math.h": "c",
+			"cmath": "c",
+			"cstdlib": "c",
+			"*.tcc": "c",
+			"cinttypes": "c"
 		}
 	}
 }

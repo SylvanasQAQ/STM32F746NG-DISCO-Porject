@@ -7,9 +7,12 @@ static void AlarmThread(void *argument);
 
 
 /*------------------- private variables --------------------------*/
+// alarm 触发指示       1 -- 有 alarm 触发， 0 -- 无 alarm 触发
+uint8_t alarm_triggered;
+
 osThreadId_t app_alarmTaskHandle;
 const osThreadAttr_t app_alarmTask_attributes = {
-    .name = "app_alarmTask",
+    .name = "Alarm Task",
     .stack_size = 1024,
     .priority = (osPriority_t)osPriorityBelowNormal,
 };
@@ -89,8 +92,10 @@ static void AlarmThread(void *argument)
         if(alarm_triggered)
         {
             alarm_triggered = 0;
-            if(lightEffect)
+            if(lightEffect){
                 HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+                __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2, 3000);
+            }
             CreateAlarmDialog();
         }
 

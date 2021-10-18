@@ -19,12 +19,7 @@
 */
 
 // USER START (Optionally insert additional includes)
-#include "resources.h"
-#include "os_time.h"
-#include "os_state.h"
 #include "os_threads.h"
-//#undef GUI_ID_USER
-//#define GUI_ID_USER (0x800+0x10)
 // USER END
 
 #include "DIALOG.h"
@@ -36,17 +31,15 @@
 **********************************************************************
 */
 #define ID_WINDOW_0 (GUI_ID_USER + 0x00)
-#define ID_BUTTON_0 (GUI_ID_USER + 0x01)
+#define ID_GRAPH_0 (GUI_ID_USER + 0x01)
 #define ID_TEXT_0 (GUI_ID_USER + 0x02)
-#define ID_PROGBAR_0 (GUI_ID_USER + 0x03)
-#define ID_PROGBAR_1 (GUI_ID_USER + 0x04)
-#define ID_IMAGE_0 (GUI_ID_USER + 0x05)
-#define ID_IMAGE_1 (GUI_ID_USER + 0x06)
+#define ID_BUTTON_0 (GUI_ID_USER + 0x03)
+#define ID_BUTTON_1 (GUI_ID_USER + 0x04)
+#define ID_BUTTON_2 (GUI_ID_USER + 0x05)
 
 
 // USER START (Optionally insert additional defines)
-//#define GUI_ID_USER 0x800
-void updateTaskBarTitle();
+GRAPH_DATA_Handle hGraphData_AudioWindow;
 // USER END
 
 /*********************************************************************
@@ -57,7 +50,7 @@ void updateTaskBarTitle();
 */
 
 // USER START (Optionally insert additional static data)
-char taskBarTitle[] = "10/11/2021  09:48:00 Mon";
+
 // USER END
 
 /*********************************************************************
@@ -65,13 +58,12 @@ char taskBarTitle[] = "10/11/2021  09:48:00 Mon";
 *       _aDialogCreate
 */
 static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
-  { WINDOW_CreateIndirect, "TaskBar", ID_WINDOW_0, 0, 0, 480, 30, 0, 0x0, 0 },
-  { BUTTON_CreateIndirect, "", ID_BUTTON_0, 450, 0, 30, 30, 0, 0x0, 0 },
-  { TEXT_CreateIndirect, "Title", ID_TEXT_0, 0, 0, 200, 30, 0, 0x64, 0 },
-  { PROGBAR_CreateIndirect, "CPU", ID_PROGBAR_0, 405, 0, 40, 30, 0, 0x0, 0 },
-  { PROGBAR_CreateIndirect, "Memory", ID_PROGBAR_1, 360, 0, 40, 30, 0, 0x0, 0 },
-  { IMAGE_CreateIndirect, "Image1", ID_IMAGE_0, 280, -1, 30, 30, 0, 0, 0 },
-  { IMAGE_CreateIndirect, "Image2", ID_IMAGE_1, 310, 1, 30, 30, 0, 0, 0 },
+  { WINDOW_CreateIndirect, "AudioWindow", ID_WINDOW_0, 0, 0, 480, 242, 0, 0x0, 0 },
+  { GRAPH_CreateIndirect, "Graph", ID_GRAPH_0, 0, 40, 380, 202, 0, 0x0, 0 },
+  { TEXT_CreateIndirect, "Text", ID_TEXT_0, 200, 0, 80, 20, 0, 0x64, 0 },
+  { BUTTON_CreateIndirect, "Start", ID_BUTTON_0, 390, 40, 80, 40, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "Button", ID_BUTTON_1, 390, 130, 80, 40, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "Button", ID_BUTTON_2, 390, 190, 80, 40, 0, 0x0, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -95,48 +87,93 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   int     NCode;
   int     Id;
   // USER START (Optionally insert additional variables)
-  GUI_RECT  Rect;
   // USER END
 
   switch (pMsg->MsgId) {
   case WM_INIT_DIALOG:
     //
-    // Initialization of 'TaskBar'
+    // Initialization of 'Graph'
     //
-    hItem = pMsg->hWin;
-    WINDOW_SetBkColor(hItem, GUI_MAKE_COLOR(0xFFFFFFFF));
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_GRAPH_0);
+    GRAPH_SetBorder(hItem, 0, 0, 0, 0);
     //
-    // Initialization of ''
-    //
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_0);
-    BUTTON_SetFont(hItem, GUI_FONT_13B_ASCII);
-    //
-    // Initialization of 'Title'
+    // Initialization of 'Text'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
     TEXT_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
-    TEXT_SetText(hItem, " ");
-    // USER START (Optionally insert additional code for further widget initialization)
+    TEXT_SetFont(hItem, GUI_FONT_20B_ASCII);
+    TEXT_SetText(hItem, "Audio In");
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x00FF0000));
+    //
+    // Initialization of 'Start'
+    //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_0);
-    BUTTON_SetBitmap(hItem, 0, &bmHome);
-
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_IMAGE_0);
-    IMAGE_SetBitmap(hItem, &bmAlarm_disable);
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_IMAGE_1);
-    IMAGE_SetBitmap(hItem, &bmMusic_disable);
-
+    BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
+    BUTTON_SetText(hItem, "Start");
+    //
+    // Initialization of 'Button'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1);
+    BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
+    BUTTON_SetText(hItem, "Record");
+    //
+    // Initialization of 'Button'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_2);
+    BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
+    BUTTON_SetText(hItem, "Replay");
+    // USER START (Optionally insert additional code for further widget initialization)
+    hItem = pMsg->hWin;
+    WINDOW_SetBkColor(hItem, GUI_MAKE_COLOR(0x00E3F5D8));
+    
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_GRAPH_0);
+    GRAPH_SetColor(hItem, GUI_WHITE, GRAPH_CI_BK);
+    GRAPH_SetBorder(hItem, 10, 10, 10, 10);
+	  GRAPH_SetLineStyleH(hItem, GUI_LS_DOT);
+	  GRAPH_SetLineStyleV(hItem, GUI_LS_DOT);
+	  /* 创建数据对象 */
+	  hGraphData_AudioWindow = GRAPH_DATA_YT_Create(GUI_RED, 360, 0, 0);
+	  GRAPH_AttachData(hItem, hGraphData_AudioWindow);
     // USER END
     break;
   case WM_NOTIFY_PARENT:
     Id    = WM_GetId(pMsg->hWinSrc);
     NCode = pMsg->Data.v;
     switch(Id) {
-    case ID_BUTTON_0: // Notifications sent by ''
+    case ID_BUTTON_0: // Notifications sent by 'Start'
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        WM_BringToBottom(hCurrentWindow);
-        WM_BringToTop(hCurrentWindow = hHomeWindow);
+        app_audioTaskHandle = osThreadNew(app_audio_thread, NULL, &app_audioTask_attributes);
+        WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, Id));
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
+    case ID_BUTTON_1: // Notifications sent by 'Button'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
+    case ID_BUTTON_2: // Notifications sent by 'Button'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -152,29 +189,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     }
     break;
   // USER START (Optionally insert additional message handling)
-  case WM_PAINT:
-    WM_GetClientRect(&Rect);
-    GUI_ClearRectEx(&Rect);
-    GUI_DrawRectEx(&Rect);
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
-    TEXT_SetTextColor(hItem, GUI_BLUE_98);
-    TEXT_SetFont(hItem, &GUI_Font16B_ASCII);
-    TEXT_SetText(hItem, taskBarTitle);
-
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_PROGBAR_0);
-    PROGBAR_SetValue(hItem, osGetCPUUsage());
-    if(osGetCPUUsage() > 60)
-      PROGBAR_SetBarColor(hItem, 0, GUI_RED);
-    else
-      PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
-    
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_PROGBAR_1);
-    PROGBAR_SetValue(hItem, osGetMemUsage());
-    if(osGetMemUsage() > 60)
-      PROGBAR_SetBarColor(hItem, 0, GUI_RED);
-    else
-      PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
-  break;
   // USER END
   default:
     WM_DefaultProc(pMsg);
@@ -190,10 +204,10 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 */
 /*********************************************************************
 *
-*       CreateTaskBar
+*       CreateAudioWindow
 */
-WM_HWIN CreateTaskBar(void);
-WM_HWIN CreateTaskBar(void) {
+WM_HWIN CreateAudioWindow(void);
+WM_HWIN CreateAudioWindow(void) {
   WM_HWIN hWin;
 
   hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
@@ -201,10 +215,9 @@ WM_HWIN CreateTaskBar(void) {
 }
 
 // USER START (Optionally insert additional public code)
-void updateTaskBarTitle()
+void MoveToAudioWindow(WM_HWIN hWin)
 {
-  sprintf(taskBarTitle, "%02d/%02d/%d  %02d:%02d:%02d %s",
-            date_month, date_day, date_year, time_hour, time_minute, time_second, date_weekday);
+  WM_EnableWindow(WM_GetDialogItem(hWin, ID_BUTTON_0));
 }
 // USER END
 
