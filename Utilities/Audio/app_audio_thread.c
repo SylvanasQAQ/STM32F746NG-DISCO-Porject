@@ -12,6 +12,7 @@
 
 /* Functions prototypes ---------------------------------------------*/
 static void AudioThread(void *argument);
+static void AudioSingalProcess();
 
 
 
@@ -63,9 +64,6 @@ static void AudioThread(void *argument)
     extern GUI_HWIN hCurrentWindow;
     extern GUI_HWIN hAudioWindow;
 
-    static uint32_t sum, ave, tmp;
-    static uint32_t offset = 2140;
-
 
     HAL_ADC_Start_IT(&hadc3);
     HAL_ADC_Start_DMA(&hadc3, (uint32_t *)audio_record_buffer, 1024);
@@ -76,22 +74,11 @@ static void AudioThread(void *argument)
     {   
         if(Audio_DMA_Ready)
         {
-            sum = 0;
-            for(int i = 0; i < 1024; i += 32)
-            {
-                for(int j = i; j < i+32; j++)
-                    ave += audio_record_buffer[j];
-                ave /= 32;
-
-                // 剔除坏值
-                if((tmp = (ave + 100 - offset) * 20 / 30 + 100 /3) < 3000){
-                    GRAPH_DATA_YT_AddValue(hGraphData_AudioWindow, tmp);
-                }
-                sum += ave; 
-            }
-            offset = (offset + sum / 32) / 2;
             Audio_DMA_Ready = 0;
+            AudioSingalProcess();
         }
+
+
         if(hCurrentWindow != hAudioWindow){
             HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);
             HAL_ADC_Stop_DMA(&hadc3);
@@ -101,4 +88,41 @@ static void AudioThread(void *argument)
         else
             osDelay(20);
     }
+}
+
+
+
+#define SCREEN_OFFSET       90
+/**
+ * @brief  对 ADC 采样的信号进行处理以便于显示
+ * @param  None
+ * @retval None
+ */
+static void AudioSingalProcess()
+{
+    static long sum, ave;
+    static uint16_t i;
+    static long audio_offset = 2140;
+    static signed short tmp, minTmp;
+
+    sum = 0;
+    minTmp = 150;
+    for(i = 0; i < 1024; i += 32)
+    {
+        for(int j = i; j < i+32; j++)
+            ave += audio_record_buffer[j];
+        ave /= 32;
+
+        // 剔除坏值
+        tmp = (ave + SCREEN_OFFSET - audio_offset) ;
+        if((tmp > 0)){
+            GRAPH_DATA_YT_AddValue(hGraphData_AudioWindow, tmp);
+            if(tmp < minTmp)
+                minTmp = tmp;
+        }
+        else
+            GRAPH_DATA_YT_AddValue(hGraphData_AudioWindow, minTmp);
+        sum += ave; 
+    }
+    audio_offset = (audio_offset + sum / 32) / 2;
 }

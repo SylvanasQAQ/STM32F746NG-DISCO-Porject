@@ -8,31 +8,33 @@
 #include "main.h"
 #include <math.h>
 
-
 /* Defines ------------------------------------------------------------------*/
-#define NPT 256
-
 
 /* Functions prototypes ---------------------------------------------*/
 static void FreqAnalysisThread(void *argument);
+static void Freq_FFT_Calculation();
+static void Freq_MainFreq_Measurement();
 
 
 
 
 /* Static data -----------------------------------------------------------*/
-float32_t fftResultMag[1024];
-float32_t audioData[2048];
-extern uint16_t audio_record_buffer[1024];
+extern uint16_t audio_record_buffer[1024];  // ADC 采集的语音原始数据
+static float32_t audioDataQuart[512];       // 用于频谱显示的语音原始数据
+float32_t fftResultMag[256];                // 频谱显示 FFT 结果
+
+static float32_t audioDataFull[2048];   // 用于主频率测量的语音原始数据
+static float32_t fftResultMagFull[512]; // 测量主频率 FFT 结果
+uint16_t Freq_MainFreq_Index;           // 测量主频率的结果     index of 1024
 
 
 
 
 /* Private variables -----------------------------------------------------------*/
-
-extern uint16_t Audio_DMA_Ready; // DMA 就绪标志
-uint16_t Freq_FFT_Ready;       // FFT 数据就绪标志
-
-
+extern uint16_t Audio_DMA_Ready;  // DMA 就绪标志
+uint16_t Freq_FFT_Ready = 0;      // 用于频谱显示的 FFT 数据就绪标志
+uint16_t Freq_MainFreq_Ready = 0; // 主频率测量就绪标志
+uint16_t Freq_FFT_Points = 128;   // FFT 点数
 
 // audio 线程的 Handle
 osThreadId_t app_freqAnalysisTaskHandle;
@@ -41,6 +43,8 @@ const osThreadAttr_t app_freqAnalysisTask_attributes = {
     .stack_size = 1024,
     .priority = (osPriority_t)osPriorityAboveNormal,
 };
+
+
 
 
 
@@ -56,13 +60,12 @@ void app_freqAnalysis_thread(void *argument)
     FreqAnalysisThread(argument);
 }
 
+
 /**
  * @brief  Frequency Analysis Thread
  * @param  void* argument : pointer that is passed to the thread function as start argument.
  * @retval None
  */
-uint32_t offset = 2140;
-    uint32_t sum;
 static void FreqAnalysisThread(void *argument)
 {
     extern ADC_HandleTypeDef hadc3;
@@ -70,41 +73,21 @@ static void FreqAnalysisThread(void *argument)
     extern GUI_HWIN hCurrentWindow;
     extern GUI_HWIN hFreqAnalysisWindow;
 
-    
-
-
-
     HAL_ADC_Start_IT(&hadc3);
     HAL_ADC_Start_DMA(&hadc3, (uint32_t *)audio_record_buffer, 1024);
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
     for (;;)
     {
-        if (Audio_DMA_Ready)
+        if (Audio_DMA_Ready)                // ADC 采样的 DMA 数据传送完成 
         {
             Audio_DMA_Ready = 0;
-            
-            sum = 0;
-            for(int i = 0; i < 1024; i++)
-            {
-                sum += audio_record_buffer[i];
-                audioData[i*2] = ((int)audio_record_buffer[i] - (int)offset);
-                audioData[i*2 + 1] = 0;
-            }
-            offset = (offset + sum/1024) >> 1;
-
-            arm_cfft_f32(&arm_cfft_sR_f32_len256, audioData, 0, 1);
-            arm_cmplx_mag_f32(audioData, fftResultMag, NPT);
-
-            arm_cfft_f32(&arm_cfft_sR_f32_len512, (float32_t*)audioData+1024, 0, 1);
-            arm_cmplx_mag_f32(audioData+1024, (float32_t*)fftResultMag+512, 512);
-            // for (int i = 0; i < NPT; i++)
-            //     fftResultMag[i] = fftResultMag[i] / NPT * 2;
-
-            Freq_FFT_Ready = 1;
+            Freq_FFT_Calculation();
+            Freq_MainFreq_Measurement();
         }
 
-        if(hCurrentWindow != hFreqAnalysisWindow){
+        if (hCurrentWindow != hFreqAnalysisWindow)
+        {
             HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);
             HAL_ADC_Stop_DMA(&hadc3);
             HAL_ADC_Stop_IT(&hadc3);
@@ -112,5 +95,102 @@ static void FreqAnalysisThread(void *argument)
         }
         else
             osDelay(20);
+    }
+}
+
+
+
+
+
+static uint32_t audio_offset = 2140;              // 语音信号的基频幅度
+/**
+ * @brief  计算用于频谱显示的 FFT 数据
+ * @note   在完成时设置 `Freq_MainFreq_Ready = 1`, 同时得到主频率测量结果 `Freq_MainFreq_Index`
+ * @param  None
+ * @retval None
+ */
+static void Freq_FFT_Calculation()
+{
+    static uint32_t sum;
+    static uint16_t i;
+
+    sum = 0;
+    for (i = 0; i < 256; i++)
+    {
+        sum += audio_record_buffer[i];
+
+        audioDataQuart[i * 2] = ((int)audio_record_buffer[i] - (int)audio_offset);
+        audioDataQuart[i * 2 + 1] = 0;
+    }
+    audio_offset = (audio_offset + sum / 256) >> 1;
+
+    // 计算用于频谱显示的数据
+    switch (Freq_FFT_Points)
+    {
+    case 128:
+        arm_cfft_f32(&arm_cfft_sR_f32_len256, audioDataQuart, 0, 1);
+        arm_cmplx_mag_f32(audioDataQuart, fftResultMag, 128);
+        break;
+    case 64:
+        arm_cfft_f32(&arm_cfft_sR_f32_len128, audioDataQuart, 0, 1);
+        arm_cmplx_mag_f32(audioDataQuart, fftResultMag, 64);
+        break;
+    case 32:
+        arm_cfft_f32(&arm_cfft_sR_f32_len64, audioDataQuart, 0, 1);
+        arm_cmplx_mag_f32(audioDataQuart, fftResultMag, 32);
+        break;
+    default:
+        arm_cfft_f32(&arm_cfft_sR_f32_len256, audioDataQuart, 0, 1);
+        arm_cmplx_mag_f32(audioDataQuart, fftResultMag, 128);
+        break;
+    }
+    fftResultMag[0] /= 2;
+    // for (int i = 0; i < NPT; i++)
+    //     fftResultMag[i] = fftResultMag[i] / NPT * 2;
+    Freq_FFT_Ready = 1;
+}
+
+
+
+
+#define MAIN_FREQ_UPCOUNTER 10
+/**
+ * @brief  测量主频率
+ * @note   在完成时设置 `Freq_MainFreq_Ready = 1`, 同时得到主频率测量结果 `Freq_MainFreq_Index`
+ * @param  None
+ * @retval None
+ */
+static void Freq_MainFreq_Measurement()
+{
+    static uint16_t         counter = 0;
+    static uint16_t         i;
+    static float32_t        maxValue;
+
+
+    counter++;
+    if (counter == MAIN_FREQ_UPCOUNTER)
+    {
+        for (i = 0; i < 1024; i++)
+        {
+            audioDataFull[i * 2] = ((int)audio_record_buffer[i] - (int)audio_offset);
+            audioDataFull[i * 2 + 1] = 0;
+        }
+
+        arm_cfft_f32(&arm_cfft_sR_f32_len1024, audioDataFull, 0, 1);
+        arm_cmplx_mag_f32(audioDataFull, fftResultMagFull, 512);
+        fftResultMagFull[0] /= 2;
+
+        maxValue = fftResultMagFull[Freq_MainFreq_Index = 0];
+        for (i = 0; i < 512; i++)
+        {
+            if (fftResultMagFull[i] > maxValue)
+            {
+                maxValue = fftResultMagFull[i];
+                Freq_MainFreq_Index = i;
+            }
+        }
+
+        Freq_MainFreq_Ready = 1; // 设置主频率测量完成标志
+        counter = 0;             // counter 清零
     }
 }

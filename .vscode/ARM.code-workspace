@@ -35,7 +35,8 @@
 			"cmath": "c",
 			"cstdlib": "c",
 			"*.tcc": "c",
-			"cinttypes": "c"
+			"cinttypes": "c",
+			"math.h": "c"
 		}
 	}
 }

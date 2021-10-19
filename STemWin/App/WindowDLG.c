@@ -146,12 +146,12 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        WM_BringToTop(hCurrentWindow = hClockWindow);
-        MoveToClockWindow(hClockWindow);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        WM_BringToTop(hCurrentWindow = hClockWindow);
+        MoveToClockWindow(hClockWindow);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -162,12 +162,12 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        WM_BringToTop(hCurrentWindow = hAlarmWindow);
-        MoveToAlarmWindow(hCurrentWindow);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        WM_BringToTop(hCurrentWindow = hAlarmWindow);
+        MoveToAlarmWindow(hCurrentWindow);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -179,12 +179,12 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
         //WM_BringToBottom(hCurrentWindow);
-        WM_BringToTop(hCurrentWindow = hAudioWindow);
-        MoveToAudioWindow(hCurrentWindow);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        WM_BringToTop(hCurrentWindow = hAudioWindow);
+        MoveToAudioWindow(hCurrentWindow);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -195,12 +195,12 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        WM_BringToTop(hCurrentWindow = hFreqAnalysisWindow);
-        MoveToFreqAnalysisWindow(hCurrentWindow);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        WM_BringToTop(hCurrentWindow = hFreqAnalysisWindow);
+        MoveToFreqAnalysisWindow(hCurrentWindow);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)

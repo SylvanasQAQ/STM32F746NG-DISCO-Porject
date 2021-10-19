@@ -68,7 +68,6 @@ static void GUIThread(void *argument)
 	extern WM_HWIN CreateAudioWindow(void);
 	extern WM_HWIN CreateFreqAnalysisWindow(void);
 
-
 	/* Initialize GUI */
 	GUI_Init();
 

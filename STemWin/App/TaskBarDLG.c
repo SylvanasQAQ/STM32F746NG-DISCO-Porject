@@ -157,7 +157,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     updateTaskBar(pMsg->hWin);
     WM_RestartTimer(pMsg->Data.v, 200000000);
     break;
-
   // USER END
   default:
     WM_DefaultProc(pMsg);

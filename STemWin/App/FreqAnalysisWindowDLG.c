@@ -21,6 +21,7 @@
 // USER START (Optionally insert additional includes)
 #include "os_threads.h"
 #include <string.h>
+#include <math.h>
 // USER END
 
 #include "DIALOG.h"
@@ -44,8 +45,8 @@
 #define ID_TEXT_7 (GUI_ID_USER + 0x0A)
 #define ID_TEXT_8 (GUI_ID_USER + 0x0B)
 #define ID_TEXT_9 (GUI_ID_USER + 0x0C)
-#define ID_HEADER_0 (GUI_ID_USER + 0x0D)
-#define ID_DROPDOWN_0 (GUI_ID_USER + 0x10)
+#define ID_DROPDOWN_0 (GUI_ID_USER + 0x0D)
+#define ID_TEXT_10 (GUI_ID_USER + 0x0E)
 
 
 // USER START (Optionally insert additional defines)
@@ -63,16 +64,19 @@ static void DrawSpectrum(uint16_t x, uint16_t y);
 static void TimerEventHandler(WM_MESSAGE *pMsg);
 static void PaintEventHandler();
 
-extern float32_t fftResultMag[1024];
+extern float32_t fftResultMag[256];
 extern uint16_t Freq_FFT_Ready;
+extern uint16_t Freq_FFT_Points;
+
+extern uint16_t Freq_MainFreq_Ready;
+extern uint16_t Freq_MainFreq_Index;
 
 extern GUI_HWIN hCurrentWindow;
 extern GUI_HWIN hFreqAnalysisWindow;
 
-uint16_t maxIndex;
+
 // 频谱显示样式，0 -- 幅度谱， 1 -- 频率谱
-uint16_t spectrumForm = 0;
-uint16_t spectrumPoints = 128;
+uint16_t spectrumStyle = 0;
 // USER END
 
 /*********************************************************************
@@ -93,8 +97,8 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { TEXT_CreateIndirect, "Text5", ID_TEXT_7, 229, 225, 25, 15, 0, 0x64, 0 },
   { TEXT_CreateIndirect, "Text6", ID_TEXT_8, 284, 225, 25, 15, 0, 0x64, 0 },
   { TEXT_CreateIndirect, "Text", ID_TEXT_9, 372, 225, 25, 15, 0, 0x64, 0 },
-  { HEADER_CreateIndirect, "Header", ID_HEADER_0, 350, 0, 130, 30, 0, 0x0, 0 },
-  { DROPDOWN_CreateIndirect, "Dropdown", ID_DROPDOWN_0, 414, 37, 60, 21, 0, 0x0, 0 },
+  { DROPDOWN_CreateIndirect, "Dropdown", ID_DROPDOWN_0, 414, 37, 60, 18, 0, 0x0, 0 },
+  { TEXT_CreateIndirect, "StyleText", ID_TEXT_10, 290, 18, 125, 20, 0, 0x64, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -214,11 +218,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     TEXT_SetText(hItem, "20k");
     TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x00361B3A));
     //
-    // Initialization of 'Header'
-    //
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_HEADER_0);
-    HEADER_AddItem(hItem, 130, "Amplitude Spec", 14);
-    //
     // Initialization of 'Dropdown'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_DROPDOWN_0);
@@ -227,6 +226,14 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     DROPDOWN_AddString(hItem, "64");
     DROPDOWN_AddString(hItem, "32");
     DROPDOWN_SetListHeight(hItem, 50);
+    //
+    // Initialization of 'StyleText'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_10);
+    TEXT_SetFont(hItem, GUI_FONT_13HB_ASCII);
+    TEXT_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x00FF8080));
+    TEXT_SetText(hItem, "@Amplitude Spec");
     // USER START (Optionally insert additional code for further widget initialization)
     // USER END
     break;
@@ -255,27 +262,16 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
+        spectrumStyle = !spectrumStyle;
+        hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_10);
+        if(spectrumStyle)
+          TEXT_SetText(hItem, "@Logarithmic Spec");
+        else
+          TEXT_SetText(hItem, "@Amplitude Spec");
+        WM_Paint(hItem);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
-        // USER START (Optionally insert code for reacting on notification message)
-        // USER END
-        break;
-      // USER START (Optionally insert additional code for further notification handling)
-      // USER END
-      }
-      break;
-    case ID_HEADER_0: // Notifications sent by 'Header'
-      switch(NCode) {
-      case WM_NOTIFICATION_CLICKED:
-        // USER START (Optionally insert code for reacting on notification message)
-        // USER END
-        break;
-      case WM_NOTIFICATION_RELEASED:
-        // USER START (Optionally insert code for reacting on notification message)
-        // USER END
-        break;
-      case WM_NOTIFICATION_MOVED_OUT:
         // USER START (Optionally insert code for reacting on notification message)
         // USER END
         break;
@@ -295,6 +291,22 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_SEL_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        hItem = WM_GetDialogItem(pMsg->hWin, Id);
+        switch (DROPDOWN_GetSel(hItem))
+        {
+        case 0:
+          Freq_FFT_Points = 128;
+          break;
+        case 1:
+          Freq_FFT_Points = 64;
+          break;
+        case 2:
+          Freq_FFT_Points = 32;
+          break;
+        default:
+          Freq_FFT_Points = 128;
+          break;
+        }
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -352,36 +364,36 @@ void MoveToFreqAnalysisWindow(WM_HWIN hWin)
 
 
 /**
- * @brief  处理 TIMER 事件
+ * @brief  处理 WM_TIMER 事件
  * @param  WM_MESSAGE* pMsg
  * @retval None
  */
 static void TimerEventHandler(WM_MESSAGE *pMsg)
 {
   static const GUI_RECT DrawingRect = {0, 40, 410, 242};
-  static uint16_t       timerCounter = 0;
-  WM_HWIN               hItem;
-  static char           mainFreqString[] = "Main Freq: 0 Hz";
+  static WM_HWIN               hItem;
+  static char           mainFreqString[30] = "Main Freq: 0 Hz";
 
-  timerCounter += 40;
-  if (timerCounter > 1000)
+
+  // 显示主频率
+  if (Freq_MainFreq_Ready)
   {
-    timerCounter = 0;
-    if (maxIndex < 850)
-    {
-      sprintf(mainFreqString, "Main Freq: %d Hz", 40000 * (maxIndex - 512) / 512);
-      hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_1);
-      WM_Paint(hItem);
-      TEXT_SetFont(hItem, GUI_FONT_16B_ASCII);
-      TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x008000FF));
-      TEXT_SetText(hItem, mainFreqString);
-    }
+    Freq_MainFreq_Ready = 0;
+    sprintf(mainFreqString, "Main Freq: %d Hz", 40000 * Freq_MainFreq_Index / 1024);
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_1);
+    WM_Paint(hItem);
+    TEXT_SetFont(hItem, GUI_FONT_16B_ASCII);
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x008000FF));
+    TEXT_SetText(hItem, mainFreqString);
   }
 
+  // 清空频谱绘制区域
   if (Freq_FFT_Ready)
     WM_InvalidateRect(pMsg->hWin, &DrawingRect);
+
+
   if (hCurrentWindow == hFreqAnalysisWindow)
-    WM_RestartTimer(pMsg->Data.v, 200000);
+    WM_RestartTimer(pMsg->Data.v, 10000);
   else
   {
     WM_InvalidateRect(pMsg->hWin, &DrawingRect);
@@ -391,28 +403,19 @@ static void TimerEventHandler(WM_MESSAGE *pMsg)
 
 
 
-
+/**
+ * @brief  处理 WM_PAINT 事件
+ * @param  None
+ * @retval None
+ */
 static void PaintEventHandler()
 {
-  static float maxValue;
-
   if (Freq_FFT_Ready)
   {
     GUI_Clear();
-
-    GUI_SetColor(GUI_ORANGE);
-    GUI_DrawRoundedFrame(0, 40, 410, 238, 30, 2);
+    GUI_SetColor(GUI_WHITE);
+    GUI_DrawRoundedFrame(0, 40, 410, 238, 30, 2);    
     DrawSpectrum(10, 232 - 180 - 10);
-
-    maxValue = fftResultMag[maxIndex = 512];
-    for (uint16_t i = 512; i < 1024; i++)
-    {
-      if (fftResultMag[i] > maxValue)
-      {
-        maxValue = fftResultMag[i];
-        maxIndex = i;
-      }
-    }
 
     Freq_FFT_Ready = 0;
   }
@@ -421,9 +424,6 @@ static void PaintEventHandler()
 
 
 
-static uint16_t topValueArr[128] = {0}; /* 频谱顶值表 */
-static uint16_t curValueArr[128] = {0}; /* 频谱当前值表 */
-static uint8_t timeArr[128] = {0};      /* 顶值停留时间表 */
 /**
  * @brief  频谱显示
  * @param  uint16_t x   频谱x坐标
@@ -432,79 +432,78 @@ static uint8_t timeArr[128] = {0};      /* 顶值停留时间表 */
  */
 static void DrawSpectrum(uint16_t x, uint16_t y)
 {
-    static const uint16_t maxVal = 180;           /* 高度固定为128个像素 */
-    static uint16_t i;
-    static uint16_t temp;
-    static float ufTempValue;
+  static uint16_t       topValueArr[128] = {0}; /* 频谱顶值表 */
+  static uint16_t       curValueArr[128] = {0}; /* 频谱当前值表 */
+  static uint8_t        timeArr[128] = {0};      /* 顶值停留时间表 */
+  static const uint16_t maxVal = 180;     /* 高度固定为128个像素 */
+  static uint16_t       i;
+  static uint16_t       temp;
+  static float32_t      ufTempValue;
+  static uint16_t       deltaX;
 
-    /* 显示32条频谱 */
-    for (i = 0; i < 128; i++)
+  deltaX = (128 / Freq_FFT_Points) * 3;
+  /* 显示32条频谱 */
+  for (i = 0; i < Freq_FFT_Points; i++)
+  {
+    if (spectrumStyle == 1)
     {
-        if (spectrumForm == 1)
-        {
-            /* 对数谱，对幅值取对数 */
-            ufTempValue = fftResultMag[i] / 128;
-            if (ufTempValue < 1)
-                ufTempValue = 0;
-            temp = 80 * log10(ufTempValue);
-        }
-        else
-        {
-            /*
-               1. 幅值谱
-               2. 将得到的FFT模值除以32，方便界面显示
-            */
-            temp = fftResultMag[i] / 16;
-        }
+      /* 对数谱，对幅值取对数 */
+      ufTempValue = fftResultMag[i] / 128 * (128 / Freq_FFT_Points);
+      if (ufTempValue < 1)
+        ufTempValue = 0;
+      temp = (uint16_t)(40 * log10f(ufTempValue));
+    }
+    else // 幅值谱
+      temp = (uint16_t)fftResultMag[i] / 16 * (128 / Freq_FFT_Points);
 
-        /* 2. 更新频谱数值 */
-        if (curValueArr[i] < temp)
-            curValueArr[i] = temp;
-        else
-        {
-            if (curValueArr[i] > 1)
-                curValueArr[i] -= 2;
-            else
-                curValueArr[i] = 0;
-        }
-
-        /* 3. 更新频谱顶值 */
-        if (timeArr[i])
-            timeArr[i]--;
-        else if (topValueArr[i])
-            topValueArr[i]--;
-
-        /* 4. 重设频谱顶值 */
-        if (curValueArr[i] > topValueArr[i])
-        {
-            topValueArr[i] = curValueArr[i];   
-            timeArr[i] = 10;     /* 重设峰值停顿时间 */
-        }
-
-        /* 5. 防止超出频谱值和顶值范围，高度固定为128个像素 */
-        if (curValueArr[i] > maxVal)
-            curValueArr[i] = maxVal;
-
-        if (topValueArr[i] > maxVal)
-            topValueArr[i] = maxVal;
+    /* 2. 更新频谱数值 */
+    if (curValueArr[i] < temp)
+      curValueArr[i] = temp;
+    else
+    {
+      if (curValueArr[i] > 1)
+        curValueArr[i] -= 2;
+      else
+        curValueArr[i] = 0;
     }
 
-    /* 6. 绘制得到的频谱 */
-    for (i = 0; i < 128; i++)
-    {
-        /* 显示频谱 */
-        GUI_DrawGradientV(x,
-                          y + maxVal - curValueArr[i],
-                          x + 3,
-                          y + maxVal,
-                          GUI_YELLOW,
-                          GUI_GREEN);
+    /* 3. 更新频谱顶值 */
+    if (timeArr[i])
+      timeArr[i]--;
+    else if (topValueArr[i])
+      topValueArr[i]--;
 
-        /* 显示顶值 */
-        GUI_SetColor(GUI_RED);
-        GUI_DrawHLine(y + maxVal - topValueArr[i] - 1, x, x + 3);
-        x += 3;
+    /* 4. 重设频谱顶值 */
+    if (curValueArr[i] > topValueArr[i])
+    {
+      topValueArr[i] = curValueArr[i];
+      timeArr[i] = 10; /* 重设峰值停顿时间 */
     }
+
+    /* 5. 防止超出频谱值和顶值范围，高度固定为128个像素 */
+    if (curValueArr[i] > maxVal)
+      curValueArr[i] = maxVal;
+
+    if (topValueArr[i] > maxVal)
+      topValueArr[i] = maxVal;
+  }
+
+  /* 6. 绘制得到的频谱 */
+  for (i = 0; i < Freq_FFT_Points; i++)
+  {
+    /* 显示频谱 */
+    GUI_DrawGradientV(x,
+                      y + maxVal - curValueArr[i],
+                      x + deltaX,
+                      y + maxVal,
+                      GUI_YELLOW,
+                      GUI_GREEN);
+
+    /* 显示顶值 */
+    GUI_SetColor(GUI_RED);
+    GUI_DrawHLine(y + maxVal - topValueArr[i] - 1, x, x + deltaX);
+    x += deltaX;
+  }
 }
 // USER END
 
