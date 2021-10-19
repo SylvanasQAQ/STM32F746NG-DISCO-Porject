@@ -23,6 +23,7 @@
 #include "os_time.h"
 #include "os_state.h"
 #include "os_threads.h"
+#include "app_alarm.h"
 //#undef GUI_ID_USER
 //#define GUI_ID_USER (0x800+0x10)
 // USER END
@@ -45,8 +46,8 @@
 
 
 // USER START (Optionally insert additional defines)
-//#define GUI_ID_USER 0x800
-void updateTaskBarTitle();
+static void updateTaskBar(WM_HWIN hWin);
+static void updateTaskBarAlarmState(WM_HWIN hAlarmImage);
 // USER END
 
 /*********************************************************************
@@ -95,7 +96,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   int     NCode;
   int     Id;
   // USER START (Optionally insert additional variables)
-  GUI_RECT  Rect;
   // USER END
 
   switch (pMsg->MsgId) {
@@ -125,6 +125,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     hItem = WM_GetDialogItem(pMsg->hWin, ID_IMAGE_1);
     IMAGE_SetBitmap(hItem, &bmMusic_disable);
 
+    WM_CreateTimer(pMsg->hWin, 0, 200000, 0);
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -152,29 +153,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     }
     break;
   // USER START (Optionally insert additional message handling)
-  case WM_PAINT:
-    WM_GetClientRect(&Rect);
-    GUI_ClearRectEx(&Rect);
-    GUI_DrawRectEx(&Rect);
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
-    TEXT_SetTextColor(hItem, GUI_BLUE_98);
-    TEXT_SetFont(hItem, &GUI_Font16B_ASCII);
-    TEXT_SetText(hItem, taskBarTitle);
+  case WM_TIMER:
+    updateTaskBar(pMsg->hWin);
+    WM_RestartTimer(pMsg->Data.v, 200000000);
+    break;
 
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_PROGBAR_0);
-    PROGBAR_SetValue(hItem, osGetCPUUsage());
-    if(osGetCPUUsage() > 60)
-      PROGBAR_SetBarColor(hItem, 0, GUI_RED);
-    else
-      PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
-    
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_PROGBAR_1);
-    PROGBAR_SetValue(hItem, osGetMemUsage());
-    if(osGetMemUsage() > 60)
-      PROGBAR_SetBarColor(hItem, 0, GUI_RED);
-    else
-      PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
-  break;
   // USER END
   default:
     WM_DefaultProc(pMsg);
@@ -201,10 +184,58 @@ WM_HWIN CreateTaskBar(void) {
 }
 
 // USER START (Optionally insert additional public code)
-void updateTaskBarTitle()
+static void updateTaskBar(WM_HWIN hWin)
 {
+  WM_HWIN hItem;
+
   sprintf(taskBarTitle, "%02d/%02d/%d  %02d:%02d:%02d %s",
             date_month, date_day, date_year, time_hour, time_minute, time_second, date_weekday);
+  hItem = WM_GetDialogItem(hWin, ID_TEXT_0);
+  TEXT_SetTextColor(hItem, GUI_BLUE);
+  TEXT_SetFont(hItem, &GUI_Font16B_ASCII);
+  TEXT_SetText(hItem, taskBarTitle);
+
+  updateTaskBarAlarmState(WM_GetDialogItem(hWin, ID_IMAGE_0));
+
+  hItem = WM_GetDialogItem(hWin, ID_PROGBAR_0);
+  PROGBAR_SetValue(hItem, osGetCPUUsage());
+  if (osGetCPUUsage() > 60)
+    PROGBAR_SetBarColor(hItem, 0, GUI_RED);
+  else
+    PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
+
+  hItem = WM_GetDialogItem(hWin, ID_PROGBAR_1);
+  PROGBAR_SetValue(hItem, osGetMemUsage());
+  if (osGetMemUsage() > 60)
+    PROGBAR_SetBarColor(hItem, 0, GUI_RED);
+  else
+    PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
+}
+
+
+/**
+ * @brief  update the alarm state image of taskbar
+ * @param  WM_HWIN hItem
+ * @retval None
+ */
+static void updateTaskBarAlarmState(WM_HWIN hAlarmImage)
+{
+	static uint8_t		alarmState = 0;
+
+	if (alarmState != alarm_enabled)
+	{
+		alarmState = alarm_enabled;
+		if (alarmState == 1)
+		{
+			IMAGE_SetBitmap(hAlarmImage, &bmAlarm_enable);
+			app_alarmTaskHandle = osThreadNew(app_alarm_thread, NULL, &app_alarmTask_attributes);
+		}
+		else
+		{
+			IMAGE_SetBitmap(hAlarmImage, &bmAlarm_disable);
+			osThreadTerminate(app_alarmTaskHandle);
+		}
+	}
 }
 // USER END
 

@@ -53,6 +53,8 @@
 */
 
 // USER START (Optionally insert additional static data)
+static void rainbowEffect(WM_HWIN hItem);
+
 extern GUI_HWIN hClockWindow;
 extern GUI_HWIN hCurrentWindow;
 extern GUI_HWIN hDesktop;
@@ -132,6 +134,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     BUTTON_SetBitmap(hItem, 0, &bmMic);
     hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_3);
     BUTTON_SetBitmap(hItem, 0, &bmFreq);
+
+    WM_CreateTimer(pMsg->hWin, 0, 200000000, 0);
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -264,6 +268,10 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     }
     break;
   // USER START (Optionally insert additional message handling)
+  case WM_TIMER:
+    rainbowEffect(WM_GetDialogItem(pMsg->hWin, ID_TEXT_0));
+    WM_RestartTimer(pMsg->Data.v, 200000000);
+    break;
   // USER END
   default:
     WM_DefaultProc(pMsg);
@@ -294,6 +302,43 @@ WM_HWIN CreateDesktop(void) {
   WM_HWIN hWin = WM_CreateWindow(0, 30, 480, 242, WM_CF_SHOW, 0, 0);
 
   return hWin;
+}
+
+
+
+/**
+ * @brief  Apply rainbow effect to object `hItem`
+ * @param  WM_HWIN hItem
+ * @param  int second
+ * @retval None
+ */
+static void rainbowEffect(WM_HWIN hItem)
+{
+  static unsigned short second = 0;
+	switch (second++ % 7)
+	{
+	case 0:
+		TEXT_SetTextColor(hItem, GUI_RED);
+		break;
+	case 1:
+		TEXT_SetTextColor(hItem, GUI_ORANGE);
+		break;
+	case 2:
+		TEXT_SetTextColor(hItem, GUI_YELLOW);
+		break;
+	case 3:
+		TEXT_SetTextColor(hItem, GUI_GREEN);
+		break;
+	case 4:
+		TEXT_SetTextColor(hItem, GUI_CYAN);
+		break;
+	case 5:
+		TEXT_SetTextColor(hItem, GUI_BLUE);
+		break;
+	case 6:
+		TEXT_SetTextColor(hItem, GUI_MAGENTA);
+		break;
+	};
 }
 // USER END
 

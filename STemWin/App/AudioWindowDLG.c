@@ -189,6 +189,12 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     }
     break;
   // USER START (Optionally insert additional message handling)
+  case WM_PRE_PAINT:
+    GUI_MULTIBUF_Begin();
+      break;
+  case WM_POST_PAINT:
+    GUI_MULTIBUF_End();
+      break;
   // USER END
   default:
     WM_DefaultProc(pMsg);

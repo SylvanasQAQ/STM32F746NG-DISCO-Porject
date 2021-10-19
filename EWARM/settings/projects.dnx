@@ -20,7 +20,7 @@
         <stlinkfoundProbes />
     </StLinkDriver>
     <DebugChecksum>
-        <Checksum>3213042652</Checksum>
+        <Checksum>1792680300</Checksum>
     </DebugChecksum>
     <Exceptions>
         <StopOnUncaught>_ 0</StopOnUncaught>
@@ -111,7 +111,10 @@
         <Category>_ 0</Category>
     </LogFile>
     <Aliases>
-        <Count>0</Count>
+        <A0>_ "C:\Users\thomasto\Projects\CMSIS_5\CMSIS\DSP\Include\arm_math.h" ""</A0>
+        <A1>_ "C:\Users\thomasto\Projects\CMSIS_5\CMSIS\DSP\Source\ComplexMathFunctions\arm_cmplx_mag_f32.c" ""</A1>
+        <A2>_ "C:\Users\thomasto\Projects\CMSIS_5\CMSIS\DSP\Source\TransformFunctions\arm_cfft_radix8_f32.c" ""</A2>
+        <Count>3</Count>
         <SuppressDialog>0</SuppressDialog>
     </Aliases>
     <DriverProfiling>

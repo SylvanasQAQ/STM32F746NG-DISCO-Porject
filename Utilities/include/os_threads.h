@@ -33,7 +33,7 @@ extern const osThreadAttr_t app_audioTask_attributes;
 //Frequency analysis thread
 void app_freqAnalysis_thread(void *argument);
 extern osThreadId_t app_freqAnalysisTaskHandle;
-extern const osThreadAttr_t app_audioTask_attributes;
+extern const osThreadAttr_t app_freqAnalysisTask_attributes;
 
 
 #endif
