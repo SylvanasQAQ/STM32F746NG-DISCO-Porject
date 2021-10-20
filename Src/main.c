@@ -102,7 +102,7 @@ static void MPU_Config(void);
 uint16_t Audio_DMA_Ready;                     // DMA 就绪标志
 
 /**
-  * @brief  ADC3 IN0 �??????? DMA 完成中断
+  * @brief  ADC3 IN0 �???????? DMA 完成中断
   * @param  ADC_HandleTypeDef *hadc
   * @retval None
   */
@@ -628,7 +628,7 @@ static void MX_TIM5_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 1;
+  sConfigOC.Pulse = 50;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)

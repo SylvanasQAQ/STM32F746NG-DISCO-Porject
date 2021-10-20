@@ -121,9 +121,8 @@ static void AudioThread(void *argument)
                 
             osDelay(25);
         }
-        else{
+        else
             osDelay(25);
-        }
     }
 }
 #endif
@@ -244,9 +243,8 @@ static void AudioSingalProcess()
 
 
 
-uint16_t ind = 0;
-uint16_t freqArr[200];
-inline uint16_t abs(uint16_t a)
+
+inline uint16_t abs(int a)
 {
     return a > 0 ? a : -a;
 }
@@ -259,7 +257,8 @@ static void AudioSingalExtract()
 {
     static float32_t maxValue;
     static uint16_t i, index, usMainFreq;
-    static uint16_t low, high, mid, a, b, c;
+    static uint16_t low, high, mid;
+    static int a, b, c;
 
     // 寻找主频率
     if(Audio_Record_OnOff)
@@ -278,7 +277,6 @@ static void AudioSingalExtract()
             }
         }
         usMainFreq = 8000 * index / 1024;
-        freqArr[ind++] = usMainFreq;
 
 
 
@@ -292,15 +290,17 @@ static void AudioSingalExtract()
             else
                 low = mid+1;
         }
+
+
         if(low > 0 && low < 70)
         {
-            a = abs(usMainFreq - music_frequencies[low-1]);
-            b = abs(usMainFreq - music_frequencies[low]);
-            c = abs(usMainFreq - music_frequencies[low-2]);
+            a = abs((int)usMainFreq - music_frequencies[low]);
+            b = abs((int)usMainFreq - music_frequencies[low-1]);
+            c = abs((int)usMainFreq - music_frequencies[low-2]);
             if(a <= b && a <= c)
-                usMainFreq = music_frequencies[low-1];
-            else if(b <= a && b <= c)
                 usMainFreq = music_frequencies[low];
+            else if(b <= a && b <= c)
+                usMainFreq = music_frequencies[low-1];
             else
                 usMainFreq = music_frequencies[low-2];
         }
@@ -336,13 +336,14 @@ static void AudioSingalReplay()
         timeElapsed += 25;
         if(timeElapsed >= 125)
         {
-            // if(audio_main_freq[i] == 0)
-            //     __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, 0);
-            // else
+            if(audio_main_freq[i] == 0)
+                __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, 0);
+            else
             {
-                autoReload = 1000000 / audio_main_freq[i] - 1;
+                autoReload = 1000000 / audio_main_freq[i];
+                __HAL_TIM_SET_PRESCALER(&htim5, 108-1);
                 __HAL_TIM_SetAutoreload(&htim5, autoReload);
-                __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, autoReload /2);
+                __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, 10);
                 __HAL_TIM_SetCounter(&htim5, autoReload/3);
             }
             i++;
