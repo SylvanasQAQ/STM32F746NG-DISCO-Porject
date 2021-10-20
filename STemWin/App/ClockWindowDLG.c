@@ -457,24 +457,24 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         // USER START (Optionally insert code for reacting on notification message)
         hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0);
         index = LISTWHEEL_GetPos(hItem);
-        date_month = index+1;
+        os_date_month = index+1;
         
         hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1);
         index = LISTWHEEL_GetPos(hItem);
-        date_day = index+1;
+        os_date_day = index+1;
 
         hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_2);
         index = LISTWHEEL_GetPos(hItem);
         LISTWHEEL_GetItemText(hItem, index, buf, 7);
-        date_year = atoi(buf);
+        os_date_year = atoi(buf);
 
         hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_3);
         index = LISTWHEEL_GetPos(hItem);
-        time_hour = index;
+        os_time_hour = index;
 
         hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_4);
         index = LISTWHEEL_GetPos(hItem);
-        time_minute = index;
+        os_time_minute = index;
         
         updateSysWeekday();
 
@@ -544,15 +544,15 @@ WM_HWIN CreateClockWindow(void) {
  */
 void MoveToClockWindow(WM_HWIN hWin)
 {
-  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_0), date_month - 1);
+  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_0), os_date_month - 1);
 
-  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_1), date_day - 1);
+  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_1), os_date_day - 1);
 
-  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_2), date_year - 1990);
+  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_2), os_date_year - 1990);
 
-  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_3), time_hour);
+  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_3), os_time_hour);
 
-  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_4), time_minute);
+  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_4), os_time_minute);
 }
 
 

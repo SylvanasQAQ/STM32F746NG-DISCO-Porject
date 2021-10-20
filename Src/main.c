@@ -21,6 +21,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "fatfs.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -50,14 +52,28 @@ CRC_HandleTypeDef hcrc;
 
 I2C_HandleTypeDef hi2c3;
 
+SD_HandleTypeDef hsd1;
+DMA_HandleTypeDef hdma_sdmmc1_rx;
+DMA_HandleTypeDef hdma_sdmmc1_tx;
+
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim5;
 
-UART_HandleTypeDef huart4;
+UART_HandleTypeDef huart7;
 
-osThreadId_t defaultTaskHandle;
+osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
+#ifdef CMSIS_V1
+osTimerId hTimerLCD;
+static void TouchCheckTimerCallback(const void *n);
+#endif
+
+
+#ifdef CMSIS_V2
 osTimerId_t timer_lcd;
+static void TouchCheckTimerCallback(void *n);
+#endif
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -72,11 +88,12 @@ extern void GRAPHICS_MainTask(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_ADC3_Init(void);
-static void MX_UART4_Init(void);
-void StartDefaultTask(void *argument);
+static void MX_SDMMC1_SD_Init(void);
+static void MX_UART7_Init(void);
+static void MX_TIM5_Init(void);
+void StartDefaultTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
-static void TouchCheckTimerCallback(void *n);
 static void MPU_Config(void);
 /* USER CODE END PFP */
 
@@ -85,7 +102,7 @@ static void MPU_Config(void);
 uint16_t Audio_DMA_Ready;                     // DMA 就绪标志
 
 /**
-  * @brief  ADC3 IN0 �? DMA 完成中断
+  * @brief  ADC3 IN0 �??????? DMA 完成中断
   * @param  ADC_HandleTypeDef *hadc
   * @retval None
   */
@@ -93,6 +110,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
   Audio_DMA_Ready = 1;
 }
+uint16_t initFreq = 100;
 /* USER CODE END 0 */
 
 /**
@@ -138,9 +156,13 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_ADC3_Init();
-  MX_UART4_Init();
+  MX_SDMMC1_SD_Init();
+  MX_UART7_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_4);
+  __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, 0);
   BSP_SDRAM_Init();
   /* USER CODE END 2 */
 
@@ -150,40 +172,56 @@ int main(void)
   /* Initialise the graphical stack engine */
   GRAPHICS_Init();
       
-  osKernelInitialize();
+  
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
+
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
+  
+
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
+  #ifdef CMSIS_V1
+  osTimerDef(timer_lcd, TouchCheckTimerCallback);
+  hTimerLCD = osTimerCreate(osTimer(timer_lcd), osTimerPeriodic, NULL);
+  osTimerStart(hTimerLCD, 10);
+  #endif
+
+
+  #ifdef CMSIS_V2
   timer_lcd = osTimerNew(TouchCheckTimerCallback, osTimerPeriodic, NULL, NULL);
   osTimerStart(timer_lcd, 40);
+  #endif
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
+  MX_FATFS_Init();
+  MX_USB_DEVICE_Init();
   /* add queues, ... */
-  
+  #ifdef CMSIS_V2
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  const osThreadAttr_t defaultTask_attributes = {
-    .name = "defaultTask",
-    .priority = (osPriority_t) osPriorityNormal,
-    .stack_size = 128
-  };
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
   osThreadTerminate(defaultTaskHandle);
   guiTaskHandle = osThreadNew(gui_thread, NULL, &guiTask_attributes);
+  #endif
+  /* add threads, ... */
+  #ifdef CMSIS_V1
+  xTaskCreate(gui_thread, "GUI Task", 512, NULL, osPriorityHigh, &guiTaskHandle);
+
+  vTaskStartScheduler();
+  #endif
   //
   /* USER CODE END RTOS_THREADS */
 
@@ -225,9 +263,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 25;
-  RCC_OscInitStruct.PLL.PLLN = 400;
+  RCC_OscInitStruct.PLL.PLLN = 432;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 2;
+  RCC_OscInitStruct.PLL.PLLQ = 9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -247,20 +285,23 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_6) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_7) != HAL_OK)
   {
     Error_Handler();
   }
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LTDC|RCC_PERIPHCLK_UART4
-                              |RCC_PERIPHCLK_I2C3;
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LTDC|RCC_PERIPHCLK_UART7
+                              |RCC_PERIPHCLK_I2C3|RCC_PERIPHCLK_SDMMC1
+                              |RCC_PERIPHCLK_CLK48;
   PeriphClkInitStruct.PLLSAI.PLLSAIN = 200;
   PeriphClkInitStruct.PLLSAI.PLLSAIR = 5;
   PeriphClkInitStruct.PLLSAI.PLLSAIQ = 2;
   PeriphClkInitStruct.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV2;
   PeriphClkInitStruct.PLLSAIDivQ = 1;
   PeriphClkInitStruct.PLLSAIDivR = RCC_PLLSAIDIVR_4;
-  PeriphClkInitStruct.Uart4ClockSelection = RCC_UART4CLKSOURCE_PCLK1;
+  PeriphClkInitStruct.Uart7ClockSelection = RCC_UART7CLKSOURCE_PCLK1;
   PeriphClkInitStruct.I2c3ClockSelection = RCC_I2C3CLKSOURCE_PCLK1;
+  PeriphClkInitStruct.Clk48ClockSelection = RCC_CLK48SOURCE_PLL;
+  PeriphClkInitStruct.Sdmmc1ClockSelection = RCC_SDMMC1CLKSOURCE_CLK48;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -367,7 +408,7 @@ static void MX_I2C3_Init(void)
 
   /* USER CODE END I2C3_Init 1 */
   hi2c3.Instance = I2C3;
-  hi2c3.Init.Timing = 0x00401959;
+  hi2c3.Init.Timing = 0x6000030D;
   hi2c3.Init.OwnAddress1 = 0;
   hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -398,6 +439,34 @@ static void MX_I2C3_Init(void)
 }
 
 /**
+  * @brief SDMMC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SDMMC1_SD_Init(void)
+{
+
+  /* USER CODE BEGIN SDMMC1_Init 0 */
+
+  /* USER CODE END SDMMC1_Init 0 */
+
+  /* USER CODE BEGIN SDMMC1_Init 1 */
+
+  /* USER CODE END SDMMC1_Init 1 */
+  hsd1.Instance = SDMMC1;
+  hsd1.Init.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
+  hsd1.Init.ClockBypass = SDMMC_CLOCK_BYPASS_DISABLE;
+  hsd1.Init.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
+  hsd1.Init.BusWide = SDMMC_BUS_WIDE_1B;
+  hsd1.Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
+  hsd1.Init.ClockDiv = 0;
+  /* USER CODE BEGIN SDMMC1_Init 2 */
+
+  /* USER CODE END SDMMC1_Init 2 */
+
+}
+
+/**
   * @brief TIM2 Initialization Function
   * @param None
   * @retval None
@@ -417,9 +486,9 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 50-1;
+  htim2.Init.Prescaler = 100-1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 50-1;
+  htim2.Init.Period = 27-1;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -475,7 +544,7 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 10000-1;
+  htim3.Init.Prescaler = 10800-1;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 10000-1;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -515,37 +584,96 @@ static void MX_TIM3_Init(void)
 }
 
 /**
-  * @brief UART4 Initialization Function
+  * @brief TIM5 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_UART4_Init(void)
+static void MX_TIM5_Init(void)
 {
 
-  /* USER CODE BEGIN UART4_Init 0 */
+  /* USER CODE BEGIN TIM5_Init 0 */
 
-  /* USER CODE END UART4_Init 0 */
+  /* USER CODE END TIM5_Init 0 */
 
-  /* USER CODE BEGIN UART4_Init 1 */
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
 
-  /* USER CODE END UART4_Init 1 */
-  huart4.Instance = UART4;
-  huart4.Init.BaudRate = 115200;
-  huart4.Init.WordLength = UART_WORDLENGTH_8B;
-  huart4.Init.StopBits = UART_STOPBITS_1;
-  huart4.Init.Parity = UART_PARITY_NONE;
-  huart4.Init.Mode = UART_MODE_TX_RX;
-  huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart4) != HAL_OK)
+  /* USER CODE BEGIN TIM5_Init 1 */
+
+  /* USER CODE END TIM5_Init 1 */
+  htim5.Instance = TIM5;
+  htim5.Init.Prescaler = 108-1;
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.Period = 100;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN UART4_Init 2 */
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 1;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM5_Init 2 */
 
-  /* USER CODE END UART4_Init 2 */
+  /* USER CODE END TIM5_Init 2 */
+  HAL_TIM_MspPostInit(&htim5);
+
+}
+
+/**
+  * @brief UART7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_UART7_Init(void)
+{
+
+  /* USER CODE BEGIN UART7_Init 0 */
+
+  /* USER CODE END UART7_Init 0 */
+
+  /* USER CODE BEGIN UART7_Init 1 */
+
+  /* USER CODE END UART7_Init 1 */
+  huart7.Instance = UART7;
+  huart7.Init.BaudRate = 115200;
+  huart7.Init.WordLength = UART_WORDLENGTH_8B;
+  huart7.Init.StopBits = UART_STOPBITS_1;
+  huart7.Init.Parity = UART_PARITY_NONE;
+  huart7.Init.Mode = UART_MODE_TX_RX;
+  huart7.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart7.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart7.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart7.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN UART7_Init 2 */
+
+  /* USER CODE END UART7_Init 2 */
 
 }
 
@@ -562,6 +690,12 @@ static void MX_DMA_Init(void)
   /* DMA2_Stream1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+  /* DMA2_Stream3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
+  /* DMA2_Stream6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream6_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream6_IRQn);
 
 }
 
@@ -577,10 +711,10 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOK_CLK_ENABLE();
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOI_CLK_ENABLE();
@@ -606,6 +740,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
   /*Configure GPIO pin : PK3 */
   GPIO_InitStruct.Pin = GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -629,6 +769,28 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+#ifdef CMSIS_V1
+/**
+  * @brief  Timer callback for `TouchCheck` (40 ms)
+  * @param  n: Timer index 
+  * @retval None
+  */
+static void TouchCheckTimerCallback(const void *n)
+{  
+  uint8_t buf[6];
+	HAL_I2C_Mem_Read(&hi2c3, 0x70, 0x02, 1, buf, 1, 1000);
+	if (buf[0] > 0 && buf[0] < 6)
+	{
+		HAL_I2C_Mem_Read(&hi2c3, 0x70, 0x03, 1, buf, 4, 1000);
+		GUI_TOUCH_StoreState(TOUCH_POS(buf[2], buf[3]), TOUCH_POS(buf[0], buf[1]));
+	}
+	else
+		GUI_TOUCH_StoreState(-1, -1);
+}
+#endif
+
+
+#ifdef CMSIS_V2
 /**
   * @brief  Timer callback for `TouchCheck` (40 ms)
   * @param  n: Timer index 
@@ -646,6 +808,7 @@ static void TouchCheckTimerCallback(void *n)
 	else
 		GUI_TOUCH_StoreState(-1, -1);
 }
+#endif
 
 
 /**
@@ -690,13 +853,18 @@ static void MPU_Config(void)
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+void StartDefaultTask(void const * argument)
 {
     
     
            
           
-    
+                 
+  /* init code for USB_DEVICE */
+  MX_USB_DEVICE_Init();
+
+  /* init code for FATFS */
+  MX_FATFS_Init();
 
 /* Graphic application */  
   GRAPHICS_MainTask();

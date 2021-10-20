@@ -20,6 +20,7 @@
 
 // USER START (Optionally insert additional includes)
 #include "resources.h"
+#include "main.h"
 // USER END
 
 #include "DIALOG.h"
@@ -68,7 +69,7 @@ extern GUI_HWIN hFreqAnalysisWindow;
 extern void MoveToClockWindow(WM_HWIN hWin);
 extern void MoveToAlarmWindow(WM_HWIN hWin);
 extern void MoveToAudioWindow(WM_HWIN hWin);
-extern void MoveToFreqAnalysisWindows(WM_HWIN hWin);
+extern void MoveToFreqAnalysisWindow(WM_HWIN hWin);
 // USER END
 
 /*********************************************************************
@@ -135,7 +136,13 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_3);
     BUTTON_SetBitmap(hItem, 0, &bmFreq);
 
+    #ifdef CMSIS_V1
+    WM_CreateTimer(pMsg->hWin, 0, 100, 0);
+    #endif
+
+    #ifdef CMSIS_V2
     WM_CreateTimer(pMsg->hWin, 0, 200000000, 0);
+    #endif
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -270,7 +277,13 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   // USER START (Optionally insert additional message handling)
   case WM_TIMER:
     rainbowEffect(WM_GetDialogItem(pMsg->hWin, ID_TEXT_0));
+    #ifdef CMSIS_V1
+    WM_RestartTimer(pMsg->Data.v, 1000);
+    #endif
+
+    #ifdef CMSIS_V2
     WM_RestartTimer(pMsg->Data.v, 200000000);
+    #endif
     break;
   // USER END
   default:

@@ -24,8 +24,6 @@
 #include "os_state.h"
 #include "os_threads.h"
 #include "app_alarm.h"
-//#undef GUI_ID_USER
-//#define GUI_ID_USER (0x800+0x10)
 // USER END
 
 #include "DIALOG.h"
@@ -48,6 +46,7 @@
 // USER START (Optionally insert additional defines)
 static void updateTaskBar(WM_HWIN hWin);
 static void updateTaskBarAlarmState(WM_HWIN hAlarmImage);
+static void updateTaskBarMusicState(WM_HWIN hMusicImage);
 // USER END
 
 /*********************************************************************
@@ -58,7 +57,8 @@ static void updateTaskBarAlarmState(WM_HWIN hAlarmImage);
 */
 
 // USER START (Optionally insert additional static data)
-char taskBarTitle[] = "10/11/2021  09:48:00 Mon";
+char taskBarTitle[50] = "10/11/2021  09:48:00 Mon";
+extern uint16_t Audio_Record_Replay;
 // USER END
 
 /*********************************************************************
@@ -125,7 +125,13 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     hItem = WM_GetDialogItem(pMsg->hWin, ID_IMAGE_1);
     IMAGE_SetBitmap(hItem, &bmMusic_disable);
 
+    #ifdef CMSIS_V1
+    WM_CreateTimer(pMsg->hWin, 0, 100, 0);
+    #endif
+
+    #ifdef CMSIS_V2
     WM_CreateTimer(pMsg->hWin, 0, 200000, 0);
+    #endif
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -155,7 +161,14 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   // USER START (Optionally insert additional message handling)
   case WM_TIMER:
     updateTaskBar(pMsg->hWin);
+    #ifdef CMSIS_V1
+    WM_RestartTimer(pMsg->Data.v, 1000);
+    #endif
+
+
+    #ifdef CMSIS_V2
     WM_RestartTimer(pMsg->Data.v, 200000000);
+    #endif
     break;
   // USER END
   default:
@@ -187,14 +200,17 @@ static void updateTaskBar(WM_HWIN hWin)
 {
   WM_HWIN hItem;
 
+  // 更新日期时间栏
   sprintf(taskBarTitle, "%02d/%02d/%d  %02d:%02d:%02d %s",
-            date_month, date_day, date_year, time_hour, time_minute, time_second, date_weekday);
+            os_date_month, os_date_day, os_date_year, os_time_hour, os_time_minute, os_time_second, os_date_weekday);
   hItem = WM_GetDialogItem(hWin, ID_TEXT_0);
   TEXT_SetTextColor(hItem, GUI_BLUE);
   TEXT_SetFont(hItem, &GUI_Font16B_ASCII);
   TEXT_SetText(hItem, taskBarTitle);
 
+
   updateTaskBarAlarmState(WM_GetDialogItem(hWin, ID_IMAGE_0));
+  updateTaskBarMusicState(WM_GetDialogItem(hWin, ID_IMAGE_1));
 
   hItem = WM_GetDialogItem(hWin, ID_PROGBAR_0);
   PROGBAR_SetValue(hItem, osGetCPUUsage());
@@ -227,12 +243,50 @@ static void updateTaskBarAlarmState(WM_HWIN hAlarmImage)
 		if (alarmState == 1)
 		{
 			IMAGE_SetBitmap(hAlarmImage, &bmAlarm_enable);
-			app_alarmTaskHandle = osThreadNew(app_alarm_thread, NULL, &app_alarmTask_attributes);
+			//
+      #ifdef CMSIS_V1
+      xTaskCreate(app_alarm_thread, "Alarm Task", 256, NULL, osPriorityNormal, &app_alarmTaskHandle);
+      #endif
+
+      #ifdef CMSIS_V2
+      app_alarmTaskHandle = osThreadNew(app_alarm_thread, NULL, &app_alarmTask_attributes);
+      #endif
 		}
 		else
 		{
 			IMAGE_SetBitmap(hAlarmImage, &bmAlarm_disable);
+
+      #ifdef CMSIS_V1
+			vTaskDelete(app_alarmTaskHandle);
+      #endif
+
+      #ifdef CMSIS_V2
 			osThreadTerminate(app_alarmTaskHandle);
+      #endif
+		}
+	}
+}
+
+
+/**
+ * @brief  update the music state image of taskbar
+ * @param  WM_HWIN hItem
+ * @retval None
+ */
+static void updateTaskBarMusicState(WM_HWIN hMusicImage)
+{
+	static uint8_t		musicState = 0;
+
+	if (musicState != Audio_Record_Replay)
+	{
+		musicState = Audio_Record_Replay;
+		if (Audio_Record_Replay == 1)
+		{
+			IMAGE_SetBitmap(hMusicImage, &bmMusic_enable);
+		}
+		else
+		{
+			IMAGE_SetBitmap(hMusicImage, &bmMusic_disable);
 		}
 	}
 }

@@ -20,6 +20,7 @@
 
 // USER START (Optionally insert additional includes)
 #include "os_threads.h"
+#include "cmsis_os.h"
 // USER END
 
 #include "DIALOG.h"
@@ -40,6 +41,10 @@
 
 // USER START (Optionally insert additional defines)
 GRAPH_DATA_Handle hGraphData_AudioWindow;
+uint16_t Audio_Record_OnOff = 0;
+uint16_t Audio_Record_Ready = 0;
+uint16_t Audio_Record_Replay = 0;
+extern uint16_t audio_main_freq_index;
 // USER END
 
 /*********************************************************************
@@ -134,6 +139,9 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 	  /* 创建数据对象 */
 	  hGraphData_AudioWindow = GRAPH_DATA_YT_Create(GUI_RED, 360, 0, 0);
 	  GRAPH_AttachData(hItem, hGraphData_AudioWindow);
+
+    WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1));
+    WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_2));
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -144,8 +152,15 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
+        #ifdef CMSIS_V1
+        xTaskCreate(app_audio_thread, "Audio Task", 256, NULL, osPriorityNormal, &app_audioTaskHandle);
+        #endif
+
+        #ifdef CMSIS_V2
         app_audioTaskHandle = osThreadNew(app_audio_thread, NULL, &app_audioTask_attributes);
+        #endif
         WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, Id));
+        WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1));
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -160,6 +175,24 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
+        if(Audio_Record_OnOff == 0)
+        {
+          Audio_Record_OnOff = 1;
+          audio_main_freq_index = 0;
+          hItem = WM_GetDialogItem(pMsg->hWin, Id);
+          BUTTON_SetText(hItem, "Stop Rec");
+          BUTTON_SetTextColor(hItem, 0, GUI_RED);
+
+          WM_CreateTimer(pMsg->hWin, 0, 100, 0);        // 创建定时器
+        }
+        else if(Audio_Record_OnOff == 1)
+        {
+          Audio_Record_OnOff = 0;
+          hItem = WM_GetDialogItem(pMsg->hWin, Id);
+          BUTTON_SetText(hItem, "Record");
+          BUTTON_SetTextColor(hItem, 0, GUI_BLACK);
+          WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_2));
+        }
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -174,6 +207,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
+        Audio_Record_Replay = 1;
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -195,6 +229,28 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   case WM_POST_PAINT:
     GUI_MULTIBUF_End();
       break;
+  case WM_TIMER:
+    if(Audio_Record_Ready == 1)
+    {
+      Audio_Record_Ready = 0;
+      hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1);
+      BUTTON_SetText(hItem, "Record");
+      BUTTON_SetTextColor(hItem, 0, GUI_BLACK);
+      WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_2));       // 开启 replay 按键
+    }
+
+    if(Audio_Record_OnOff)        // 只有在开启音调提取后才会重启 timer
+    {
+      #ifdef CMSIS_V1
+      WM_RestartTimer(pMsg->Data.v, 1000);
+      #endif
+
+      #ifdef CMSIS_V2
+      WM_RestartTimer(pMsg->Data.v, 200000000);
+      #endif
+    }
+    else
+      WM_DeleteTimer(pMsg->Data.v);
   // USER END
   default:
     WM_DefaultProc(pMsg);
@@ -224,6 +280,8 @@ WM_HWIN CreateAudioWindow(void) {
 void MoveToAudioWindow(WM_HWIN hWin)
 {
   WM_EnableWindow(WM_GetDialogItem(hWin, ID_BUTTON_0));
+  WM_DisableWindow(WM_GetDialogItem(hWin, ID_BUTTON_1));
+  WM_DisableWindow(WM_GetDialogItem(hWin, ID_BUTTON_2));
 }
 // USER END
 

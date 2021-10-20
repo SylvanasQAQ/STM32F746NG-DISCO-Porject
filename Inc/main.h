@@ -42,7 +42,7 @@ extern "C" {
 #include "GUIDRV_Lin.h"
 
 #include "cmsis_os.h"
-#include "cmsis_os2.h"
+//#include "cmsis_os2.h"
 #include "FreeRTOS.h"
 #include "FreeRTOSConfig.h"
 #include "task.h"
@@ -80,6 +80,7 @@ void Error_Handler(void);
 
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN Private defines */
+#define CMSIS_V1
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

@@ -36,7 +36,7 @@
                 </option>
                 <option>
                     <name>Output description</name>
-                    <state>Full formatting, with multibyte support.</state>
+                    <state>No specifier a, A, no specifier n, no float nor long long, without multibyte support.</state>
                 </option>
                 <option>
                     <name>GOutputBinary</name>
@@ -173,11 +173,11 @@
                 <option>
                     <name>OGPrintfVariant</name>
                     <version>0</version>
-                    <state>1</state>
+                    <state>3</state>
                 </option>
                 <option>
                     <name>OGPrintfMultibyteSupport</name>
-                    <state>1</state>
+                    <state>0</state>
                 </option>
                 <option>
                     <name>OGScanfVariant</name>
@@ -360,13 +360,16 @@
                     <state>$PROJ_DIR$/../Drivers/CMSIS/Include</state>
                     <state>$PROJ_DIR$/../Middlewares/ST/STemWin/inc</state>
                     <state>$PROJ_DIR$/../Middlewares/Third_Party/FreeRTOS/Source/include</state>
-                    <state>$PROJ_DIR$/../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2</state>
                     <state>$PROJ_DIR$/../Middlewares/Third_Party/FreeRTOS/Source/portable/IAR/ARM_CM7/r0p1</state>
                     <state>$PROJ_DIR$/../Utilities/include</state>
                     <state>$PROJ_DIR$/../Drivers/CMSIS/DSP/Include</state>
                     <state>$PROJ_DIR$\..\Drivers\BSP\STM32746G-Discovery</state>
                     <state>$PROJ_DIR$\..\Drivers\BSP\Components\Common</state>
                     <state>$PROJ_DIR$\..\Drivers\BSP\Components\wm8994</state>
+                    <state>$PROJ_DIR$/../Middlewares/ST/STM32_USB_Device_Library/Core/Inc</state>
+                    <state>$PROJ_DIR$/../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Inc</state>
+                    <state>$PROJ_DIR$/../Middlewares/Third_Party/FatFs/src</state>
+                    <state>$PROJ_DIR$/../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS</state>
                 </option>
                 <option>
                     <name>CCStdIncCheck</name>
@@ -936,7 +939,7 @@
                 </option>
                 <option>
                     <name>IlinkOptInline</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>IlinkOptExceptionsAllow</name>
@@ -1091,6 +1094,15 @@
                 </group>
             </group>
             <file>
+                <name>$PROJ_DIR$\..\Src\bsp_driver_sd.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\fatfs.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\fatfs_platform.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Src\freertos.c</name>
             </file>
             <file>
@@ -1106,6 +1118,9 @@
                 <name>$PROJ_DIR$\..\Src\main.c</name>
             </file>
             <file>
+                <name>$PROJ_DIR$\..\Src\sd_diskio.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Src\STemwin_wrapper.c</name>
             </file>
             <file>
@@ -1116,6 +1131,18 @@
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\stm32f7xx_it.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\usb_device.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\usbd_conf.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\usbd_desc.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\usbd_storage_if.c</name>
             </file>
         </group>
     </group>
@@ -1202,6 +1229,12 @@
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_ltdc_ex.c</name>
             </file>
             <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_pcd.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_pcd_ex.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_pwr.c</name>
             </file>
             <file>
@@ -1218,6 +1251,9 @@
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_sai_ex.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_sd.c</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_sdram.c</name>
@@ -1241,19 +1277,40 @@
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_ll_fmc.c</name>
             </file>
             <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_ll_sdmmc.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_ll_usart.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_ll_usb.c</name>
             </file>
         </group>
     </group>
     <group>
         <name>Middlewares</name>
         <group>
-            <name>FreeRTOS</name>
+            <name>FatFs</name>
             <file>
-                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os1.c</name>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FatFs\src\diskio.c</name>
             </file>
             <file>
-                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os2.c</name>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FatFs\src\ff.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FatFs\src\ff_gen_drv.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FatFs\src\option\syscall.c</name>
+            </file>
+        </group>
+        <group>
+            <name>FreeRTOS</name>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS\cmsis_os.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os1.c</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Middlewares\Third_Party\FreeRTOS\Source\croutine.c</name>
@@ -1295,6 +1352,30 @@
                 <name>$PROJ_DIR$\..\Middlewares\ST\STemWin\Lib\STemWin_CM7_OS_wc32_ot_ARGB.a</name>
             </file>
         </group>
+        <group>
+            <name>USB_Device_Library</name>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\ST\STM32_USB_Device_Library\Core\Src\usbd_core.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\ST\STM32_USB_Device_Library\Core\Src\usbd_ctlreq.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\ST\STM32_USB_Device_Library\Core\Src\usbd_ioreq.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\ST\STM32_USB_Device_Library\Class\MSC\Src\usbd_msc.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\ST\STM32_USB_Device_Library\Class\MSC\Src\usbd_msc_bot.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\ST\STM32_USB_Device_Library\Class\MSC\Src\usbd_msc_data.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Middlewares\ST\STM32_USB_Device_Library\Class\MSC\Src\usbd_msc_scsi.c</name>
+            </file>
+        </group>
     </group>
     <group>
         <name>Utilities</name>
@@ -1314,6 +1395,9 @@
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Utilities\Audio\app_freq_thread.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\Audio\dsp_resource.c</name>
             </file>
         </group>
         <group>

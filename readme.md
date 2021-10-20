@@ -33,3 +33,27 @@ void testDSP()
   return;
 }
 ```
+
+
+## SD 卡写入
+
+```c
+HAL_StatusTypeDef status;
+uint8_t txBuf[512];
+for(int i = 0; i < 512; i++)
+    txBuf[i] = i;
+status = HAL_SD_WriteBlocks(&hsd1, txBuf, 0, 1, 10000);
+```
+
+
+## FAT 文件系统测试
+
+```c
+MX_FATFS_Init();
+
+FRESULT ret;
+ret = f_mount(&SDFatFS, "", 0);
+ret = f_open(&SDFile, "test.txt", FA_CREATE_ALWAYS | FA_WRITE);
+ret = f_printf(&SDFile, "Hello, %d\n", 112);
+ret = f_close(&SDFile);
+```

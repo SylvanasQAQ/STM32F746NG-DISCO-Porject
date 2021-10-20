@@ -12,15 +12,15 @@
         <ByteLimit>50</ByteLimit>
     </Stack>
     <StLinkDriver>
-        <stlinkserialNo>43234115</stlinkserialNo>
-        <stlinkfoundProbes />
         <CStepIntDis>_ 0</CStepIntDis>
         <LeaveTargetRunning>_ 0</LeaveTargetRunning>
         <stlinkResetStyle>0</stlinkResetStyle>
         <stlinkResetStrategy>2</stlinkResetStrategy>
+        <stlinkserialNo>43234115</stlinkserialNo>
+        <stlinkfoundProbes />
     </StLinkDriver>
     <DebugChecksum>
-        <Checksum>518756572</Checksum>
+        <Checksum>3666605845</Checksum>
     </DebugChecksum>
     <Exceptions>
         <StopOnUncaught>_ 0</StopOnUncaught>
@@ -38,11 +38,11 @@
     </CallStack>
     <SWOTraceHWSettings>
         <OverrideDefaultClocks>0</OverrideDefaultClocks>
-        <CpuClock>200000000</CpuClock>
+        <CpuClock>216000000</CpuClock>
         <ClockAutoDetect>0</ClockAutoDetect>
         <ClockWanted>2000000</ClockWanted>
         <JtagSpeed>2000000</JtagSpeed>
-        <Prescaler>100</Prescaler>
+        <Prescaler>108</Prescaler>
         <TimeStampPrescIndex>0</TimeStampPrescIndex>
         <TimeStampPrescData>0</TimeStampPrescData>
         <PcSampCYCTAP>1</PcSampCYCTAP>
@@ -105,10 +105,6 @@
     <Breakpoints2>
         <Count>0</Count>
     </Breakpoints2>
-    <TermIOLog>
-        <LoggingEnabled>_ 0</LoggingEnabled>
-        <LogFile>_ ""</LogFile>
-    </TermIOLog>
     <LogFile>
         <LoggingEnabled>_ 0</LoggingEnabled>
         <LogFile>_ ""</LogFile>
@@ -134,4 +130,8 @@
     <CallStackStripe>
         <ShowTiming>1</ShowTiming>
     </CallStackStripe>
+    <TermIOLog>
+        <LoggingEnabled>_ 0</LoggingEnabled>
+        <LogFile>_ ""</LogFile>
+    </TermIOLog>
 </settings>

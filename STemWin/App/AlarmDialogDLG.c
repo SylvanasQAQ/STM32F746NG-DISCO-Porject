@@ -36,6 +36,9 @@
 
 
 // USER START (Optionally insert additional defines)
+// 一些 dialog_type 可能的取值
+#define DIALOG_ALARM      0
+#define DIALOG_AUDIO      1
 // USER END
 
 /*********************************************************************
@@ -46,6 +49,10 @@
 */
 
 // USER START (Optionally insert additional static data)
+static uint16_t dialog_type = 0;
+
+static void ButtonEventProcess(WM_MESSAGE * pMsg);
+
 extern TIM_HandleTypeDef htim3;
 extern void MoveToAlarmWindow(WM_HWIN hWin);
 extern WM_HWIN hAlarmWindow;
@@ -119,10 +126,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        //HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
-        __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2, 0);
-        GUI_EndDialog(pMsg->hWin, 0);
-        MoveToAlarmWindow(hAlarmWindow);
+        ButtonEventProcess(pMsg);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -166,6 +170,34 @@ WM_HWIN CreateAlarmDialog(void) {
 }
 
 // USER START (Optionally insert additional public code)
+WM_HWIN CreateAlarmDialog_Self(char * title, char * text, uint16_t type) {
+  WM_HWIN hWin;
+
+  hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
+
+  FRAMEWIN_SetText(WM_GetDialogItem(hWin, ID_FRAMEWIN_0), title);
+  TEXT_SetText(WM_GetDialogItem(hWin, ID_TEXT_0), text);
+
+  WM_MakeModal(hWin);
+  WM_SetStayOnTop(hWin, 1);
+  return hWin;
+}
+
+static void ButtonEventProcess(WM_MESSAGE * pMsg)
+{
+  switch (dialog_type)
+  {
+  case DIALOG_ALARM:
+    __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2, 0);
+    GUI_EndDialog(pMsg->hWin, 0);
+    MoveToAlarmWindow(hAlarmWindow);
+    break;
+  
+  default:
+    GUI_EndDialog(pMsg->hWin, 0);
+    break;
+  }
+}
 // USER END
 
 /*************************** End of file ****************************/

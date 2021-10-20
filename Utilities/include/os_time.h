@@ -13,14 +13,14 @@ void updateSysWeekday();
 
 
 /* Exported variables -------------------------------------------------------- */
-extern uint32_t time_second; 
-extern uint32_t time_minute;
-extern uint32_t time_hour;
-extern uint32_t date_day;
-extern uint32_t date_month;
-extern uint32_t date_year;
-extern uint32_t date_weekday_index;
-extern char date_weekday[3];
+extern uint32_t os_time_second; 
+extern uint32_t os_time_minute;
+extern uint32_t os_time_hour;
+extern uint32_t os_date_day;
+extern uint32_t os_date_month;
+extern uint32_t os_date_year;
+extern uint32_t os_date_weekday_index;
+extern char os_date_weekday[3];
 
 
 

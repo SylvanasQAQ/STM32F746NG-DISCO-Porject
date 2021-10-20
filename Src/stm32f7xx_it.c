@@ -58,8 +58,12 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
 extern DMA_HandleTypeDef hdma_adc3;
 extern ADC_HandleTypeDef hadc3;
+extern DMA_HandleTypeDef hdma_sdmmc1_rx;
+extern DMA_HandleTypeDef hdma_sdmmc1_tx;
+extern SD_HandleTypeDef hsd1;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim1;
 
@@ -207,6 +211,20 @@ void TIM3_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles SDMMC1 global interrupt.
+  */
+void SDMMC1_IRQHandler(void)
+{
+  /* USER CODE BEGIN SDMMC1_IRQn 0 */
+
+  /* USER CODE END SDMMC1_IRQn 0 */
+  HAL_SD_IRQHandler(&hsd1);
+  /* USER CODE BEGIN SDMMC1_IRQn 1 */
+
+  /* USER CODE END SDMMC1_IRQn 1 */
+}
+
+/**
   * @brief This function handles DMA2 stream1 global interrupt.
   */
 void DMA2_Stream1_IRQHandler(void)
@@ -218,6 +236,48 @@ void DMA2_Stream1_IRQHandler(void)
   /* USER CODE BEGIN DMA2_Stream1_IRQn 1 */
 
   /* USER CODE END DMA2_Stream1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA2 stream3 global interrupt.
+  */
+void DMA2_Stream3_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA2_Stream3_IRQn 0 */
+
+  /* USER CODE END DMA2_Stream3_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_sdmmc1_rx);
+  /* USER CODE BEGIN DMA2_Stream3_IRQn 1 */
+
+  /* USER CODE END DMA2_Stream3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USB On The Go FS global interrupt.
+  */
+void OTG_FS_IRQHandler(void)
+{
+  /* USER CODE BEGIN OTG_FS_IRQn 0 */
+
+  /* USER CODE END OTG_FS_IRQn 0 */
+  HAL_PCD_IRQHandler(&hpcd_USB_OTG_FS);
+  /* USER CODE BEGIN OTG_FS_IRQn 1 */
+
+  /* USER CODE END OTG_FS_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA2 stream6 global interrupt.
+  */
+void DMA2_Stream6_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA2_Stream6_IRQn 0 */
+
+  /* USER CODE END DMA2_Stream6_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_sdmmc1_tx);
+  /* USER CODE BEGIN DMA2_Stream6_IRQn 1 */
+
+  /* USER CODE END DMA2_Stream6_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

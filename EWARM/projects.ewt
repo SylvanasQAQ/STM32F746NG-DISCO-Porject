@@ -1447,6 +1447,9 @@
             <file>
                 <name>$PROJ_DIR$\..\Utilities\Audio\app_freq_thread.c</name>
             </file>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\Audio\dsp_resource.c</name>
+            </file>
         </group>
         <group>
             <name>OS</name>
