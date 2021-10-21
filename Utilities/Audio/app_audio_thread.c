@@ -11,6 +11,20 @@
 #include "arm_math.h"
 
 
+/* Private defines -----------------------------------------------------------*/
+#define TIM_CLOCK                   108000000
+#define SAMPLING_FREQUENCY          10000
+#define TIM2_PRESCALER              100
+#define TIM2_AUTORELOAD             (TIM_CLOCK / TIM2_PRESCALER / SAMPLING_FREQUENCY - 1)
+
+#define TIM5_PRESCALER              108
+
+#define ADC_BATCH_POINTS            1024
+
+#define AUDIO_LENGTH                20
+
+
+
 /* Functions prototypes ---------------------------------------------*/
 static void AudioSingalProcess();
 static void AudioSingalExtract();
@@ -25,7 +39,7 @@ uint16_t audio_record_buffer[1024];             // ADC 原始音频数据
 float32_t audio_fft_data[2048];                 // FFT 原始数据
 float32_t audio_fft_mag[512];                   // FFT 频率幅值
 
-uint16_t audio_main_freq[200];                  // 提取到的音调
+uint16_t audio_main_freq[1024];                  // 提取到的音调
 uint16_t audio_main_freq_index = 0;            // 当前 index
 
 // 一些音符的频率
@@ -85,8 +99,8 @@ static void AudioThread(void *argument)
     extern GUI_HWIN hCurrentWindow;
     extern GUI_HWIN hAudioWindow;
 
-    __HAL_TIM_SetAutoreload(&htim2, 27*5-1);
-    __HAL_TIM_SetCounter(&htim2, 0);           // Fs = 8K Hz
+    __HAL_TIM_SetAutoreload(&htim2, TIM2_AUTORELOAD);
+    __HAL_TIM_SetCounter(&htim2, 0);            // Fs = 8K Hz
     HAL_ADC_Start_IT(&hadc3);
     HAL_ADC_Start_DMA(&hadc3, (uint32_t *)audio_record_buffer, 1024);
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
@@ -97,15 +111,15 @@ static void AudioThread(void *argument)
         if(Audio_DMA_Ready)
         {
             Audio_DMA_Ready = 0;
-            AudioSingalProcess();
-            AudioSingalExtract();
+            AudioSingalProcess();           // 处理 ADC 采样到的数据
+            AudioSingalExtract();           // 提取主音调
         }
 
-        AudioSingalReplay();
+        AudioSingalReplay();                                // 播放采集到的音调
 
 
         if(hCurrentWindow != hAudioWindow){
-            HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);
+            HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);        // 退出界面时停止 ADC 采集
             HAL_ADC_Stop_DMA(&hadc3);
             HAL_ADC_Stop_IT(&hadc3);
 
@@ -118,11 +132,9 @@ static void AudioThread(void *argument)
                 Audio_Record_Ready = 0;
                 vTaskDelete(app_audioTaskHandle);
             }
-                
-            osDelay(25);
         }
-        else
-            osDelay(25);
+
+        osDelay(5);
     }
 }
 #endif
@@ -158,9 +170,8 @@ static void AudioThread(void *argument)
     extern GUI_HWIN hCurrentWindow;
     extern GUI_HWIN hAudioWindow;
 
-
-    __HAL_TIM_SET_COUNTER(&htim2, 27*5-1);
-    __HAL_TIM_SetCounter(&htim2, 0);           // Fs = 8K Hz
+    __HAL_TIM_SetAutoreload(&htim2, TIM2_AUTORELOAD);
+    __HAL_TIM_SetCounter(&htim2, 0);            // Fs = 8K Hz
     HAL_ADC_Start_IT(&hadc3);
     HAL_ADC_Start_DMA(&hadc3, (uint32_t *)audio_record_buffer, 1024);
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
@@ -171,20 +182,30 @@ static void AudioThread(void *argument)
         if(Audio_DMA_Ready)
         {
             Audio_DMA_Ready = 0;
-            AudioSingalProcess();
-            AudioSingalExtract();
-            AudioSingalReplay();
+            AudioSingalProcess();           // 处理 ADC 采样到的数据
+            AudioSingalExtract();           // 提取主音调
         }
+
+        AudioSingalReplay();                                // 播放采集到的音调
 
 
         if(hCurrentWindow != hAudioWindow){
-            HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);
+            HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);        // 退出界面时停止 ADC 采集
             HAL_ADC_Stop_DMA(&hadc3);
             HAL_ADC_Stop_IT(&hadc3);
-            osThreadExit();
+
+            
+
+            if(Audio_Record_Replay == 0)             // 没有音乐在播放，结束线程
+            {
+                Audio_Record_OnOff = 0;
+                audio_main_freq_index = 0;
+                Audio_Record_Ready = 0;
+                vTaskDelete(app_audioTaskHandle);
+            }
         }
-        else
-            osDelay(25);
+
+        osDelay(25);
     }
 }
 #endif
@@ -243,7 +264,6 @@ static void AudioSingalProcess()
 
 
 
-
 inline uint16_t abs(int a)
 {
     return a > 0 ? a : -a;
@@ -276,8 +296,7 @@ static void AudioSingalExtract()
                 index = i;
             }
         }
-        usMainFreq = 8000 * index / 1024;
-
+        usMainFreq = SAMPLING_FREQUENCY * index / 1024;
 
 
         // 二分查找寻找最接近的频率值
@@ -308,7 +327,7 @@ static void AudioSingalExtract()
         // 将提取到的频率写入到数组
         audio_main_freq[audio_main_freq_index++] = usMainFreq;
 
-        if(audio_main_freq_index > 160)             // 只提取 20s
+        if(audio_main_freq_index > SAMPLING_FREQUENCY / ADC_BATCH_POINTS * AUDIO_LENGTH)             // 只提取 20s
         {
             Audio_Record_OnOff = 0;
             Audio_Record_Ready = 1;
@@ -333,18 +352,17 @@ static void AudioSingalReplay()
 
     if(Audio_Record_Replay)
     {
-        timeElapsed += 25;
-        if(timeElapsed >= 125)
+        timeElapsed += 5;
+        if(timeElapsed >= 1000 / (SAMPLING_FREQUENCY / ADC_BATCH_POINTS))
         {
             if(audio_main_freq[i] == 0)
                 __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, 0);
-            else
+            else if(i > 0 && audio_main_freq[i] != audio_main_freq[i-1])
             {
-                autoReload = 1000000 / audio_main_freq[i];
-                __HAL_TIM_SET_PRESCALER(&htim5, 108-1);
+                autoReload = TIM_CLOCK / TIM5_PRESCALER / audio_main_freq[i];
                 __HAL_TIM_SetAutoreload(&htim5, autoReload);
                 __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, 10);
-                __HAL_TIM_SetCounter(&htim5, autoReload/3);
+                __HAL_TIM_SetCounter(&htim5, 0);
             }
             i++;
 

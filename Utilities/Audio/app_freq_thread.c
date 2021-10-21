@@ -57,7 +57,7 @@ static void FreqAnalysisThread(void *argument)
     extern GUI_HWIN hCurrentWindow;
     extern GUI_HWIN hFreqAnalysisWindow;
 
-    __HAL_TIM_SET_COUNTER(&htim2, 27-1);
+    __HAL_TIM_SET_AUTORELOAD(&htim2, 27-1);
     __HAL_TIM_SetCounter(&htim2, 0);           // Fs = 8K Hz
     HAL_ADC_Start_IT(&hadc3);
     HAL_ADC_Start_DMA(&hadc3, (uint32_t *)audio_record_buffer, 1024);
