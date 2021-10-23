@@ -36,7 +36,16 @@
 			"cstdlib": "c",
 			"*.tcc": "c",
 			"cinttypes": "c",
-			"math.h": "c"
+			"math.h": "c",
+			"audio_player_app.h": "c",
+			"audio_if.h": "c",
+			"fatfs.h": "c",
+			"ff.h": "c",
+			"ff_gen_drv.h": "c",
+			"sd_diskio.h": "c",
+			"stm32746g_discovery.h": "c",
+			"stm32746g_discovery_sdram.h": "c",
+			"k_storage.h": "c"
 		}
 	}
 }

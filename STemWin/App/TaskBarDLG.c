@@ -244,13 +244,7 @@ static void updateTaskBarAlarmState(WM_HWIN hAlarmImage)
 		{
 			IMAGE_SetBitmap(hAlarmImage, &bmAlarm_enable);
 			//
-      #ifdef CMSIS_V1
-      xTaskCreate(app_alarm_thread, "Alarm Task", 256, NULL, osPriorityNormal, &app_alarmTaskHandle);
-      #endif
-
-      #ifdef CMSIS_V2
-      app_alarmTaskHandle = osThreadNew(app_alarm_thread, NULL, &app_alarmTask_attributes);
-      #endif
+      vAlarmTaskCreate();     // 启动闹钟线程
 		}
 		else
 		{

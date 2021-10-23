@@ -15,11 +15,10 @@
                 "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/IAR/ARM_CM7/r0p1",
                 "${workspaceFolder}/Utilities/include",
                 "Drivers/BSP/STM32746G-Discovery",
-                "Drivers/BSP/Components/Common",
-                "Drivers/BSP/Components/wm8994",
                 "${workspaceFolder}/Middlewares/Third_Party/FatFs/src",
                 "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Core/Inc",
-                "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Inc"
+                "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Inc",
+                "${workspaceFolder}/Utilities/Music",
             ],
             "defines": [
                 "_DEBUG",

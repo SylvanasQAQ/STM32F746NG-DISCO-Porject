@@ -40,6 +40,8 @@ extern "C" {
 #include<stdio.h>
 
 #include "GUIDRV_Lin.h"
+#include "GUI.h"
+#include "DIALOG.h"
 
 #include "cmsis_os.h"
 //#include "cmsis_os2.h"
@@ -47,6 +49,9 @@ extern "C" {
 #include "FreeRTOSConfig.h"
 #include "task.h"
     
+#include "ff_gen_drv.h"
+#include "sd_diskio.h"
+
 #include "stm32746g_discovery.h"
 #include "stm32746g_discovery_sdram.h"
 

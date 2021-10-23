@@ -51,9 +51,73 @@ status = HAL_SD_WriteBlocks(&hsd1, txBuf, 0, 1, 10000);
 ```c
 MX_FATFS_Init();
 
-FRESULT ret;
-ret = f_mount(&SDFatFS, "", 0);
-ret = f_open(&SDFile, "test.txt", FA_CREATE_ALWAYS | FA_WRITE);
-ret = f_printf(&SDFile, "Hello, %d\n", 112);
-ret = f_close(&SDFile);
+FRESULT ret[4];
+ret[0] = f_mount(&SDFatFS, "", 0);
+ret[1] = f_open(&SDFile, "test.txt", FA_CREATE_ALWAYS | FA_WRITE);
+ret[2] = f_printf(&SDFile, "Hello, %d\n", 112);
+ret[3] = f_close(&SDFile);
+```
+
+
+
+## SD 卡格式化为 FAT32 文件系统
+
+```c
+FRESULT result;
+FATFS fs;           /* File system object for flash disk logical drive */
+FIL fil;            /* File object */
+FILINFO fno;
+char spath[4]="";      /* SFLASH logical drive path */
+BYTE work[512];
+uint32_t br, bw;
+
+typedef struct _filesystem_info_t
+{
+        int total_space;
+        int free_space;
+} filesystem_info;
+
+filesystem_info fatfs_info;
+
+filesystem_info fatfs_get_info(uint8_t *drv)
+{
+        FATFS *fs;
+        uint8_t res;
+        DWORD fre_clust=0, fre_sect=0, tot_sect=0;
+  
+        filesystem_info info;
+  
+        memset(&info, 0x0, sizeof(filesystem_info));
+  
+        res = f_getfree((const TCHAR*)drv, &fre_clust, &fs);
+        if(res==0)
+    {                                                                                          
+                tot_sect = (fs->n_fatent - 2) * fs->csize;
+                fre_sect = fre_clust * fs->csize;
+                if(tot_sect<20480)
+                {
+            info.total_space = tot_sect>>1;
+            info.free_space = fre_sect>>1;
+                }
+                else
+                {
+            info.total_space = tot_sect>>11;
+            info.free_space = fre_sect>>11;
+                }
+    }
+       
+    return info;
+}
+
+void uctsk_lua_init(void)
+{
+        //FATFS_LinkDriver( &SFLASH_Driver, spath );
+        f_mount( &fs, (TCHAR const*) spath, 0 );
+        fatfs_info = fatfs_get_info( (uint8_t*) spath );
+        
+                f_mkfs ( (TCHAR const*) spath, FM_ANY, 0, work, sizeof(work));
+                fatfs_info = fatfs_get_info( (uint8_t*) spath );
+        
+        //FATFS_UnLinkDriver( spath );
+}
 ```

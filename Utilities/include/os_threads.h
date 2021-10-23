@@ -14,56 +14,43 @@ extern GUI_HWIN hTaskBar;
 
 // cmsis1
 #ifdef CMSIS_V1
+// GUI thread handle
 extern TaskHandle_t guiTaskHandle;
-void gui_thread(void *argument);
 
+// Alarm thread handle
 extern TaskHandle_t app_alarmTaskHandle;
-void app_alarm_thread(void *argument);
 
+//Audio thread handle
 extern TaskHandle_t app_audioTaskHandle;
-void app_audio_thread(void *argument);
 
+//Frequency analysis thread handle
 extern TaskHandle_t app_freqAnalysisTaskHandle;
-void app_freqAnalysis_thread(void *argument);
-
-// extern osThreadId guiTaskHandle;
-// void gui_thread(const void *argument);
-
-// extern osThreadId app_alarmTaskHandle;
-// void app_alarm_thread(const void *argument);
-
-// extern osThreadId app_audioTaskHandle;
-// void app_audio_thread(const void *argument);
-
-// extern osThreadId app_freqAnalysisTaskHandle;
-// void app_freqAnalysis_thread(const void *argument);
 #endif
 
 
 // cmsis2
 #ifdef CMSIS_V2
-// GUI thread
-void gui_thread(void *argument);
-extern const osThreadAttr_t guiTask_attributes;
+// GUI thread handle
 extern osThreadId_t guiTaskHandle;
 
-
-// APP alarm thread
-void app_alarm_thread(void *argument);
+// APP alarm thread handle
 extern osThreadId_t app_alarmTaskHandle;
-extern const osThreadAttr_t app_alarmTask_attributes;
 
-
-//Audio thread
-void app_audio_thread(void *argument);
+//Audio thread handle
 extern osThreadId_t app_audioTaskHandle;
-extern const osThreadAttr_t app_audioTask_attributes;
 
-
-//Frequency analysis thread
-void app_freqAnalysis_thread(void *argument);
+//Frequency analysis thread handle
 extern osThreadId_t app_freqAnalysisTaskHandle;
-extern const osThreadAttr_t app_freqAnalysisTask_attributes;
 #endif
+
+
+
+void vGUITaskCreate();
+void vAlarmTaskCreate();
+void vAudioTaskCreate();
+void vFreqAnalysisTaskCreate();
+
+
+
 
 #endif

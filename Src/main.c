@@ -64,16 +64,7 @@ UART_HandleTypeDef huart7;
 
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
-#ifdef CMSIS_V1
-osTimerId hTimerLCD;
-static void TouchCheckTimerCallback(const void *n);
-#endif
 
-
-#ifdef CMSIS_V2
-osTimerId_t timer_lcd;
-static void TouchCheckTimerCallback(void *n);
-#endif
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,6 +86,7 @@ void StartDefaultTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
 static void MPU_Config(void);
+void vLCDTimerCraete();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -102,7 +94,7 @@ static void MPU_Config(void);
 uint16_t Audio_DMA_Ready;                     // DMA 就绪标志
 
 /**
-  * @brief  ADC3 IN0 �???????? DMA 完成中断
+  * @brief  ADC3 IN0 �?????????? DMA 完成中断
   * @param  ADC_HandleTypeDef *hadc
   * @retval None
   */
@@ -110,7 +102,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
   Audio_DMA_Ready = 1;
 }
-uint16_t initFreq = 100;
 /* USER CODE END 0 */
 
 /**
@@ -164,6 +155,8 @@ int main(void)
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_4);
   __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, 0);
   BSP_SDRAM_Init();
+	//uctsk_lua_init();
+  
   /* USER CODE END 2 */
 
 /* Initialise the graphical hardware */
@@ -176,7 +169,6 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
-
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
@@ -187,22 +179,10 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
-  #ifdef CMSIS_V1
-  osTimerDef(timer_lcd, TouchCheckTimerCallback);
-  hTimerLCD = osTimerCreate(osTimer(timer_lcd), osTimerPeriodic, NULL);
-  osTimerStart(hTimerLCD, 10);
-  #endif
-
-
-  #ifdef CMSIS_V2
-  timer_lcd = osTimerNew(TouchCheckTimerCallback, osTimerPeriodic, NULL, NULL);
-  osTimerStart(timer_lcd, 40);
-  #endif
+  vLCDTimerCraete();
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-  MX_FATFS_Init();
-  MX_USB_DEVICE_Init();
   /* add queues, ... */
   #ifdef CMSIS_V2
   /* USER CODE END RTOS_QUEUES */
@@ -214,12 +194,10 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   osThreadTerminate(defaultTaskHandle);
-  guiTaskHandle = osThreadNew(gui_thread, NULL, &guiTask_attributes);
   #endif
   /* add threads, ... */
+  vGUITaskCreate();
   #ifdef CMSIS_V1
-  xTaskCreate(gui_thread, "GUI Task", 512, NULL, osPriorityHigh, &guiTaskHandle);
-
   vTaskStartScheduler();
   #endif
   //
@@ -810,6 +788,21 @@ static void TouchCheckTimerCallback(void *n)
 }
 #endif
 
+void vLCDTimerCraete()
+{
+#ifdef CMSIS_V1
+  osTimerId timer_lcd;
+  osTimerDef(timer_lcd, TouchCheckTimerCallback);
+  timer_lcd = osTimerCreate(osTimer(timer_lcd), osTimerPeriodic, NULL);
+  osTimerStart(timer_lcd, 20);
+#endif
+
+#ifdef CMSIS_V2
+  osTimerId_t timer_lcd;
+  timer_lcd = osTimerNew(TouchCheckTimerCallback, osTimerPeriodic, NULL, NULL);
+  osTimerStart(timer_lcd, 20);
+#endif
+}
 
 /**
   * @brief  Configure the MPU attributes as Normal Non Cacheable for SRAM1/2.

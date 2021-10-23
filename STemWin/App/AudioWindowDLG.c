@@ -152,13 +152,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        #ifdef CMSIS_V1
-        xTaskCreate(app_audio_thread, "Audio Task", 256, NULL, osPriorityNormal, &app_audioTaskHandle);
-        #endif
-
-        #ifdef CMSIS_V2
-        app_audioTaskHandle = osThreadNew(app_audio_thread, NULL, &app_audioTask_attributes);
-        #endif
+        vAudioTaskCreate();
         WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, Id));
         WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1));
         // USER END
@@ -182,6 +176,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
           hItem = WM_GetDialogItem(pMsg->hWin, Id);
           BUTTON_SetText(hItem, "Stop Rec");
           BUTTON_SetTextColor(hItem, 0, GUI_RED);
+          WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_2));
 
           WM_CreateTimer(pMsg->hWin, 0, 100, 0);        // 创建定时器
         }

@@ -245,16 +245,16 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
+        vFreqAnalysisTaskCreate();
+        WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, Id));
+
         #ifdef CMSIS_V1
-        xTaskCreate(app_freqAnalysis_thread, "FreqAnalysis Task", 256, NULL, osPriorityNormal, &app_freqAnalysisTaskHandle);
         WM_CreateTimer(pMsg->hWin, 0, 100, 0);
         #endif
 
         #ifdef CMSIS_V2
-        app_freqAnalysisTaskHandle = osThreadNew(app_freqAnalysis_thread, NULL, &app_audioTask_attributes);
         WM_CreateTimer(pMsg->hWin, 0, 200000, 0);
         #endif
-        WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, Id));
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -401,7 +401,7 @@ static void TimerEventHandler(WM_MESSAGE *pMsg)
 
   if (hCurrentWindow == hFreqAnalysisWindow)
     #ifdef CMSIS_V1
-    WM_RestartTimer(pMsg->Data.v, 1);
+    WM_RestartTimer(pMsg->Data.v, 2);
     #endif
     #ifdef CMSIS_V2
     WM_RestartTimer(pMsg->Data.v, 10000);

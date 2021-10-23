@@ -69,21 +69,37 @@ extern uint16_t Audio_Record_Replay;                // 音调重放标志
 
 /* Function implementations -----------------------------------------------------------*/
 #ifdef CMSIS_V1
-//osThreadId app_audioTaskHandle;
 TaskHandle_t app_audioTaskHandle;
+#endif
 
+
+#ifdef CMSIS_V2
+osThreadId_t app_audioTaskHandle;
+const osThreadAttr_t app_audioTask_attributes = {
+    .name = "Audio Task",
+    .stack_size = 1024,
+    .priority = (osPriority_t)osPriorityAboveNormal,
+};
+#endif
 
 
 static void AudioThread(void *argument);
 /**
-  * @brief  Audio Thread 的包装函数，用于 osThreadNew()
-  * @param  void *argument
+  * @brief  用于新建一个 Audio Task 的线程\任务
+  * @param  None
   * @retval None
   */
-void app_audio_thread(void *argument)
+void vAudioTaskCreate()
 {
-    AudioThread(argument);
+    #ifdef CMSIS_V1
+    xTaskCreate(AudioThread, "Audio Task", 256, NULL, osPriorityNormal, &app_audioTaskHandle);
+    #endif
+
+    #ifdef CMSIS_V2
+    app_audioTaskHandle = osThreadNew(AudioThread, NULL, &app_audioTask_attributes);
+    #endif
 }
+
 
 
 
@@ -137,78 +153,11 @@ static void AudioThread(void *argument)
         osDelay(5);
     }
 }
-#endif
 
 
 
-#ifdef CMSIS_V2
-osThreadId_t app_audioTaskHandle;
-const osThreadAttr_t app_audioTask_attributes = {
-    .name = "Audio Task",
-    .stack_size = 1024,
-    .priority = (osPriority_t)osPriorityAboveNormal,
-};
 
 
-
-static void AudioThread(void *argument);
-void app_audio_thread(void *argument)
-{
-    AudioThread(argument);
-}
-
-
-/**
- * @brief  Audio thread
- * @param  void* argument : pointer that is passed to the thread function as start argument.
- * @retval None
- */
-static void AudioThread(void *argument)
-{
-    extern ADC_HandleTypeDef hadc3;
-    extern TIM_HandleTypeDef htim2;
-    extern GUI_HWIN hCurrentWindow;
-    extern GUI_HWIN hAudioWindow;
-
-    __HAL_TIM_SetAutoreload(&htim2, TIM2_AUTORELOAD);
-    __HAL_TIM_SetCounter(&htim2, 0);            // Fs = 8K Hz
-    HAL_ADC_Start_IT(&hadc3);
-    HAL_ADC_Start_DMA(&hadc3, (uint32_t *)audio_record_buffer, 1024);
-    HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-
-
-    for(;;)
-    {   
-        if(Audio_DMA_Ready)
-        {
-            Audio_DMA_Ready = 0;
-            AudioSingalProcess();           // 处理 ADC 采样到的数据
-            AudioSingalExtract();           // 提取主音调
-        }
-
-        AudioSingalReplay();                                // 播放采集到的音调
-
-
-        if(hCurrentWindow != hAudioWindow){
-            HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);        // 退出界面时停止 ADC 采集
-            HAL_ADC_Stop_DMA(&hadc3);
-            HAL_ADC_Stop_IT(&hadc3);
-
-            
-
-            if(Audio_Record_Replay == 0)             // 没有音乐在播放，结束线程
-            {
-                Audio_Record_OnOff = 0;
-                audio_main_freq_index = 0;
-                Audio_Record_Ready = 0;
-                vTaskDelete(app_audioTaskHandle);
-            }
-        }
-
-        osDelay(25);
-    }
-}
-#endif
 
 
 
@@ -264,7 +213,7 @@ static void AudioSingalProcess()
 
 
 
-inline uint16_t abs(int a)
+uint16_t _abs(int a)
 {
     return a > 0 ? a : -a;
 }
@@ -313,9 +262,9 @@ static void AudioSingalExtract()
 
         if(low > 0 && low < 70)
         {
-            a = abs((int)usMainFreq - music_frequencies[low]);
-            b = abs((int)usMainFreq - music_frequencies[low-1]);
-            c = abs((int)usMainFreq - music_frequencies[low-2]);
+            a = _abs((int)usMainFreq - music_frequencies[low]);
+            b = _abs((int)usMainFreq - music_frequencies[low-1]);
+            c = _abs((int)usMainFreq - music_frequencies[low-2]);
             if(a <= b && a <= c)
                 usMainFreq = music_frequencies[low];
             else if(b <= a && b <= c)
