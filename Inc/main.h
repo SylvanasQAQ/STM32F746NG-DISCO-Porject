@@ -49,8 +49,6 @@ extern "C" {
 #include "FreeRTOSConfig.h"
 #include "task.h"
     
-#include "ff_gen_drv.h"
-#include "sd_diskio.h"
 
 #include "stm32746g_discovery.h"
 #include "stm32746g_discovery_sdram.h"
