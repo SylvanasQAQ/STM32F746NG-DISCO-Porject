@@ -61,6 +61,7 @@ TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim5;
 
 UART_HandleTypeDef huart7;
+UART_HandleTypeDef huart1;
 
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
@@ -82,6 +83,7 @@ static void MX_ADC3_Init(void);
 static void MX_SDMMC1_SD_Init(void);
 static void MX_UART7_Init(void);
 static void MX_TIM5_Init(void);
+static void MX_USART1_UART_Init(void);
 void StartDefaultTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
@@ -91,10 +93,15 @@ void vLCDTimerCraete();
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint16_t Audio_DMA_Ready;                     // DMA 就绪标志
+int fputc(int ch, FILE *f)
+{
+  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xffff);
+  return ch;
+}
 
+uint16_t Audio_DMA_Ready;                     // DMA 就绪标志
 /**
-  * @brief  ADC3 IN0 �?????????? DMA 完成中断
+  * @brief  ADC3 IN0 �?????????? DMA 完�?中断
   * @param  ADC_HandleTypeDef *hadc
   * @retval None
   */
@@ -150,6 +157,7 @@ int main(void)
   MX_SDMMC1_SD_Init();
   MX_UART7_Init();
   MX_TIM5_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_4);
@@ -197,6 +205,7 @@ int main(void)
   #endif
   /* add threads, ... */
   vGUITaskCreate();
+  vStorageTaskCreate();
   #ifdef CMSIS_V1
   vTaskStartScheduler();
   #endif
@@ -267,15 +276,16 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LTDC|RCC_PERIPHCLK_UART7
-                              |RCC_PERIPHCLK_I2C3|RCC_PERIPHCLK_SDMMC1
-                              |RCC_PERIPHCLK_CLK48;
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LTDC|RCC_PERIPHCLK_USART1
+                              |RCC_PERIPHCLK_UART7|RCC_PERIPHCLK_I2C3
+                              |RCC_PERIPHCLK_SDMMC1|RCC_PERIPHCLK_CLK48;
   PeriphClkInitStruct.PLLSAI.PLLSAIN = 200;
   PeriphClkInitStruct.PLLSAI.PLLSAIR = 5;
   PeriphClkInitStruct.PLLSAI.PLLSAIQ = 2;
   PeriphClkInitStruct.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV2;
   PeriphClkInitStruct.PLLSAIDivQ = 1;
   PeriphClkInitStruct.PLLSAIDivR = RCC_PLLSAIDIVR_4;
+  PeriphClkInitStruct.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
   PeriphClkInitStruct.Uart7ClockSelection = RCC_UART7CLKSOURCE_PCLK1;
   PeriphClkInitStruct.I2c3ClockSelection = RCC_I2C3CLKSOURCE_PCLK1;
   PeriphClkInitStruct.Clk48ClockSelection = RCC_CLK48SOURCE_PLL;
@@ -652,6 +662,41 @@ static void MX_UART7_Init(void)
   /* USER CODE BEGIN UART7_Init 2 */
 
   /* USER CODE END UART7_Init 2 */
+
+}
+
+/**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
 
 }
 

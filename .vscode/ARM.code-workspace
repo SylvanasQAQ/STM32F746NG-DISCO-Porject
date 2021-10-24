@@ -45,7 +45,9 @@
 			"sd_diskio.h": "c",
 			"stm32746g_discovery.h": "c",
 			"stm32746g_discovery_sdram.h": "c",
-			"k_storage.h": "c"
+			"k_storage.h": "c",
+			"usb_device.h": "c",
+			"app_wavdecoder.h": "c"
 		}
 	}
 }

@@ -6,11 +6,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "os_threads.h"
 #include "DIALOG.h"
-#include "fatfs.h"
-#include "usb_device.h"
-#include "resources.h"
 
 
 
@@ -32,6 +28,8 @@ GUI_HWIN hClockWindow;
 GUI_HWIN hAlarmWindow;
 GUI_HWIN hAudioWindow;
 GUI_HWIN hFreqAnalysisWindow;
+GUI_HWIN hMusicWindow;
+GUI_HWIN hFileDialog;
 
 
 
@@ -54,13 +52,13 @@ const osThreadAttr_t guiTask_attributes = {
 
 /**
  * @brief  GUI Thread 的包装函数，用于 osThreadNew()
- * @param  void *argument
+ * @param  None
  * @retval None
  */
 void vGUITaskCreate()
 {
 #ifdef CMSIS_V1
-	xTaskCreate(GUIThread, "GUI Task", 512, NULL, osPriorityHigh, &guiTaskHandle);
+	xTaskCreate(GUIThread, "GUI Task", 672, NULL, osPriorityLow, &guiTaskHandle);
 #endif
 
 #ifdef CMSIS_V2
@@ -69,7 +67,7 @@ void vGUITaskCreate()
 }
 
 
-FRESULT ret[4];
+
 /**
  * @brief  Start GUI task
  * @param  argument: pointer that is passed to the thread function as start argument.
@@ -84,18 +82,10 @@ static void GUIThread(void *argument)
 	extern WM_HWIN CreateAlarmWindow(void);
 	extern WM_HWIN CreateAudioWindow(void);
 	extern WM_HWIN CreateFreqAnalysisWindow(void);
+	extern WM_HWIN CreateMusicWindow(void);
 
 	/* Initialize GUI */
 	GUI_Init();
-
-	
-	MX_USB_DEVICE_Init();
-  	MX_FATFS_Init();
-	  
-	ret[0] = f_mount(&SDFatFS, "", 0);
-	ret[1] = f_open(&SDFile, "test.txt", FA_CREATE_ALWAYS | FA_WRITE);
-	ret[2] = f_printf(&SDFile, "Hello %d\n", 112);
-	ret[3] = f_close(&SDFile);
 
 	hDesktop = CreateDesktop();
 	hTaskBar = CreateTaskBar();
@@ -104,12 +94,15 @@ static void GUIThread(void *argument)
 	hAlarmWindow = CreateAlarmWindow();
 	hAudioWindow = CreateAudioWindow();
 	hFreqAnalysisWindow = CreateFreqAnalysisWindow();
+	hMusicWindow = CreateMusicWindow();
+	
 
 	WM_AttachWindow(hClockWindow, hDesktop);
 	WM_AttachWindow(hHomeWindow, hDesktop);
 	WM_AttachWindow(hAlarmWindow, hDesktop);
 	WM_AttachWindow(hAudioWindow, hDesktop);
 	WM_AttachWindow(hFreqAnalysisWindow, hDesktop);
+	WM_AttachWindow(hMusicWindow, hDesktop);
 
 	WM_BringToTop(hCurrentWindow = hHomeWindow);
 

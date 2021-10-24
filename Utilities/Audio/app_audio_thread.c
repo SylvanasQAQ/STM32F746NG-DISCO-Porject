@@ -13,7 +13,7 @@
 
 /* Private defines -----------------------------------------------------------*/
 #define TIM_CLOCK                   108000000
-#define SAMPLING_FREQUENCY          10000
+#define SAMPLING_FREQUENCY          8000
 #define TIM2_PRESCALER              100
 #define TIM2_AUTORELOAD             (TIM_CLOCK / TIM2_PRESCALER / SAMPLING_FREQUENCY - 1)
 
@@ -22,6 +22,8 @@
 #define ADC_BATCH_POINTS            1024
 
 #define AUDIO_LENGTH                20
+
+#define THREAD_SLEEP_TIME           2
 
 
 
@@ -146,11 +148,16 @@ static void AudioThread(void *argument)
                 Audio_Record_OnOff = 0;
                 audio_main_freq_index = 0;
                 Audio_Record_Ready = 0;
+#ifdef CMSIS_V1
                 vTaskDelete(app_audioTaskHandle);
+#endif
+#ifdef CMSIS_V2
+                osThreadTerminate(app_audioTaskHandle);
+#endif
             }
         }
 
-        osDelay(5);
+        osDelay(THREAD_SLEEP_TIME);
     }
 }
 
@@ -301,14 +308,14 @@ static void AudioSingalReplay()
 
     if(Audio_Record_Replay)
     {
-        timeElapsed += 5;
+        timeElapsed += THREAD_SLEEP_TIME;
         if(timeElapsed >= 1000 / (SAMPLING_FREQUENCY / ADC_BATCH_POINTS))
         {
             if(audio_main_freq[i] == 0)
                 __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, 0);
             else if(i > 0 && audio_main_freq[i] != audio_main_freq[i-1])
             {
-                autoReload = TIM_CLOCK / TIM5_PRESCALER / audio_main_freq[i];
+                autoReload = 2 * TIM_CLOCK / TIM5_PRESCALER / audio_main_freq[i];
                 __HAL_TIM_SetAutoreload(&htim5, autoReload);
                 __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, 10);
                 __HAL_TIM_SetCounter(&htim5, 0);

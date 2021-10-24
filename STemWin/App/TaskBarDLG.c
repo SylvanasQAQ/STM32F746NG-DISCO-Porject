@@ -19,7 +19,7 @@
 */
 
 // USER START (Optionally insert additional includes)
-#include "resources.h"
+#include "gui_resources.h"
 #include "os_time.h"
 #include "os_state.h"
 #include "os_threads.h"

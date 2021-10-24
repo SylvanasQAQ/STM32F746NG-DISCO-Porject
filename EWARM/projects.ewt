@@ -1212,7 +1212,13 @@
                         <name>$PROJ_DIR$\..\STemWin\App\ClockWindowDLG.c</name>
                     </file>
                     <file>
+                        <name>$PROJ_DIR$\..\STemWin\App\FileDialogDLG.c</name>
+                    </file>
+                    <file>
                         <name>$PROJ_DIR$\..\STemWin\App\FreqAnalysisWindowDLG.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\STemWin\App\MusicWindowDLG.c</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\..\STemWin\App\TaskBarDLG.c</name>
@@ -1527,6 +1533,12 @@
             </file>
         </group>
         <group>
+            <name>Music</name>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\Music\wavDecoder.c</name>
+            </file>
+        </group>
+        <group>
             <name>OS</name>
             <file>
                 <name>$PROJ_DIR$\..\Utilities\OS\os_state.c</name>
@@ -1538,10 +1550,16 @@
         <group>
             <name>STemWin</name>
             <file>
-                <name>$PROJ_DIR$\..\Utilities\STemWin\gui_thread.c</name>
+                <name>$PROJ_DIR$\..\Utilities\STemWin\gui_resources.c</name>
             </file>
             <file>
-                <name>$PROJ_DIR$\..\Utilities\STemWin\resources.c</name>
+                <name>$PROJ_DIR$\..\Utilities\STemWin\gui_thread.c</name>
+            </file>
+        </group>
+        <group>
+            <name>Storage</name>
+            <file>
+                <name>$PROJ_DIR$\..\Utilities\Storage\storage_thread.c</name>
             </file>
         </group>
     </group>

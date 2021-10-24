@@ -10,7 +10,6 @@
                 "Drivers/CMSIS/Include",
                 "Drivers/CMSIS/DSP/Include",
                 "${workspaceFolder}/Middlewares/ST/STemWin/inc",
-                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
                 "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
                 "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/IAR/ARM_CM7/r0p1",
                 "${workspaceFolder}/Utilities/include",
@@ -19,6 +18,7 @@
                 "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Core/Inc",
                 "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Inc",
                 "${workspaceFolder}/Utilities/Music",
+                "${workspaceFolder}/Drivers/CMSIS/RTOS/Template"
             ],
             "defines": [
                 "_DEBUG",
@@ -26,11 +26,10 @@
                 "_UNICODE",
                 "USE_HAL_DRIVER",
                 "STM32F746xx",
-                "__VSCODE",
-                "DMA2D"
+                "__VSCODE"
             ],
             "windowsSdkVersion": "10.0.19041.0",
-            "compilerPath": "C:/MinGW/bin/gcc.exe",
+            "compilerPath": "C:\\msys64\\mingw64\\bin\\gcc.exe",
             "cStandard": "c11",
             "cppStandard": "c++11",
             "intelliSenseMode": "windows-gcc-x86"

@@ -19,7 +19,7 @@
 */
 
 // USER START (Optionally insert additional includes)
-#include "resources.h"
+#include "gui_resources.h"
 #include "main.h"
 // USER END
 
@@ -64,12 +64,14 @@ extern GUI_HWIN hAlarmWindow;
 extern GUI_HWIN hTaskBar;
 extern GUI_HWIN hAudioWindow;
 extern GUI_HWIN hFreqAnalysisWindow;
+extern GUI_HWIN hMusicWindow;
 
 
 extern void MoveToClockWindow(WM_HWIN hWin);
 extern void MoveToAlarmWindow(WM_HWIN hWin);
 extern void MoveToAudioWindow(WM_HWIN hWin);
 extern void MoveToFreqAnalysisWindow(WM_HWIN hWin);
+extern void MoveToMusicWindow(WM_HWIN hWin);
 // USER END
 
 /*********************************************************************
@@ -135,6 +137,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     BUTTON_SetBitmap(hItem, 0, &bmMic);
     hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_3);
     BUTTON_SetBitmap(hItem, 0, &bmFreq);
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_4);
+    BUTTON_SetBitmap(hItem, 0, &bmMusic);
 
     #ifdef CMSIS_V1
     WM_CreateTimer(pMsg->hWin, 0, 100, 0);
@@ -222,6 +226,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        WM_BringToTop(hCurrentWindow = hMusicWindow);
+        MoveToMusicWindow(hMusicWindow);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
