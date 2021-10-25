@@ -2,6 +2,7 @@
 #define __APP_WAVDECODER_H
 
 #include "fatfs.h"
+#include "string.h"
 
 // ————————————————
 // 版权声明：本文为CSDN博主「AnSwEr不是答案」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。

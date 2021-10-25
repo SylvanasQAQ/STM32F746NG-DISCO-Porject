@@ -24,6 +24,12 @@ int read_wavheader(FIL *fp, WaveHeader_t *wavheader)
     f_read(fp, wavheader->data_id, 4, &len);
     f_read(fp, (char*)&wavheader->data_datasize, 4, &len);
 
+    if (strcmp(wavheader->data_id, "data") != 0)
+    {
+        fp->fptr += wavheader->data_datasize;
+        f_read(fp, wavheader->data_id, 4, &len);
+        f_read(fp, (char*)&wavheader->data_datasize, 4, &len);
+    }
     return 0;
 }
 
