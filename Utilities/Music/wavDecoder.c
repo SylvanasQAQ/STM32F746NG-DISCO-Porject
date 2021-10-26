@@ -11,9 +11,12 @@ int read_wavheader(FIL *fp, WaveHeader_t *wavheader)
         return -1;
     uint32_t len = 1;
     f_read(fp, wavheader->riff_id, 4, &len);
+    wavheader->riff_id[4] = '\0';
     f_read(fp, (char*)&wavheader->riff_datasize, 4, &len);
     f_read(fp, wavheader->riff_type, 4, &len);
+    wavheader->riff_type[4] = '\0';
     f_read(fp, wavheader->fmt_id, 4, &len);
+    wavheader->fmt_id[4] = '\0';
     f_read(fp, (char*)&wavheader->fmt_datasize, 4, &len);
     f_read(fp, (char*)&wavheader->fmt_compression_code, 2, &len);
     f_read(fp, (char*)&wavheader->fmt_channels, 2, &len);
@@ -22,6 +25,7 @@ int read_wavheader(FIL *fp, WaveHeader_t *wavheader)
     f_read(fp, (char*)&wavheader->fmt_block_align, 2, &len);
     f_read(fp, (char*)&wavheader->fmt_bit_per_sample, 2, &len);
     f_read(fp, wavheader->data_id, 4, &len);
+    wavheader->data_id[4] = '\0';
     f_read(fp, (char*)&wavheader->data_datasize, 4, &len);
 
     if (strcmp(wavheader->data_id, "data") != 0)

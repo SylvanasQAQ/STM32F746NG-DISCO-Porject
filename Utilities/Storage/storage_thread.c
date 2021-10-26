@@ -8,16 +8,24 @@
 #include "main.h"
 #include "usb_device.h"
 
+
+
 /* Defines ------------------------------------------------------------------*/
 #define SD_BLOCKSIZE 512
+
+
 
 /* Functions prototypes ---------------------------------------------*/
 static void StorageThread(void *argument);
 static FRESULT scan_files(char *path);
 
+
+
 /* Private variables -----------------------------------------------------------*/
 FRESULT ret[4];
 char pwd[20];
+
+
 
 /* Function implementations -----------------------------------------------------------*/
 #ifdef CMSIS_V1
@@ -32,6 +40,7 @@ const osThreadAttr_t storageTask_attributes = {
     .priority = (osPriority_t)osPriorityLow,
 };
 #endif
+
 
 /**
  * @brief  Storage Thread 的包装函数，用于 osThreadNew()
@@ -51,8 +60,8 @@ void vStorageTaskCreate()
 
 
 
-#include "app_wavDecoder.h"
-void PlayMusic(void);
+
+
 static void StorageThread(void *argument)
 {
     MX_USB_DEVICE_Init();
@@ -78,20 +87,21 @@ static void StorageThread(void *argument)
     // #ifdef CMSIS_V2
     //     osThreadTerminate(storageTaskHandle);
     // #endif
+    scan_files("");
     PlayMusic();
 
     for (;;)
     {
-        osDelay(10);
+        osDelay(1);
     }
 }
 
 #define TIM_CLOCK 108000000
-#define DMA_BATCH 4096 * 2
-#define WAV_VOLUME 3
+#define DMA_BATCH 4096
+#define WAV_VOLUME 1
 
 uint32_t uiPuleseBuf[DMA_BATCH];
-uint16_t *usWavData = (uint16_t *)(SDRAM_WRITE_READ_ADDR + 0x2000);
+uint8_t *usWavData = (uint8_t *)(SDRAM_WRITE_READ_ADDR + 0x2000);
 uint32_t autoReload, uiIndex = 0;
 uint32_t num = 1;
 extern TIM_HandleTypeDef htim5;
@@ -101,20 +111,23 @@ WaveHeader_t wavHeader;
 void PlayMusic(void)
 {
 
-    ret[1] = f_open(&SDFile, "TKZC.wav", FA_READ);
-    if(ret[1] != FR_OK)
-        ret[2] = f_open(&SDFile, "TianKong.wav", FA_READ);
+    //ret[1] = f_open(&SDFile, "TKZC.wav", FA_READ);
+    // if(ret[1] != FR_OK)
+      //   ret[2] = f_open(&SDFile, "TianKong.wav", FA_READ);
+    // if(ret[2] != FR_OK)
+    //      ret[1] = f_open(&SDFile, "The_Dawn.wav", FA_READ);
     ret[2] = f_open(&SDFile, "The_Dawn.wav", FA_READ);
 
     read_wavheader(&SDFile, &wavHeader);
+    ret[2] = f_read(&SDFile, usWavData, wavHeader.data_datasize, &num);
     print_wavheader(wavHeader);
+    if(num == 0)
+        return;
 
     autoReload = TIM_CLOCK / wavHeader.fmt_sample_rate;
 
-    ret[2] = f_read(&SDFile, (char *)usWavData, wavHeader.data_datasize, &num);
     for (uint32_t i = 0; i < DMA_BATCH; i++)
-        uiPuleseBuf[i] = autoReload / 0xff * usWavData[uiIndex++] / 0xff / WAV_VOLUME;
-    osDelay(1000);
+        uiPuleseBuf[i] = autoReload * usWavData[uiIndex++] / (0xff) / WAV_VOLUME;
 
     __HAL_TIM_SET_PRESCALER(&htim5, 0);
     __HAL_TIM_SetAutoreload(&htim5, autoReload);
@@ -127,12 +140,14 @@ uint32_t count = 0;
 uint16_t *p;
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
-    if (uiIndex < wavHeader.riff_datasize / 2)
+    if (uiIndex < wavHeader.riff_datasize)
         HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);
-    else
+    else{
+        HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_4);
         f_close(&SDFile);
+    }
     for (uint32_t i = DMA_BATCH / 2; i < DMA_BATCH; i++)
-        uiPuleseBuf[i] = autoReload / 0xff * usWavData[uiIndex++] / 0xff / WAV_VOLUME;
+        uiPuleseBuf[i] = autoReload * usWavData[uiIndex++]/ (0xff) / WAV_VOLUME;
 
     count++;
 }
@@ -140,7 +155,7 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 void HAL_TIM_PWM_PulseFinishedHalfCpltCallback(TIM_HandleTypeDef *htim)
 {
     for (uint32_t i = 0; i < DMA_BATCH / 2; i++)
-        uiPuleseBuf[i] = autoReload / 0xff * usWavData[uiIndex++] / 0xff / WAV_VOLUME;
+        uiPuleseBuf[i] = autoReload * usWavData[uiIndex++] / (0xff) / WAV_VOLUME;
 }
 
 static FRESULT scan_files(char *path)

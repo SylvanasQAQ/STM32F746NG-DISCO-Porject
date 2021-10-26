@@ -12,18 +12,18 @@
 
 
 /* Private defines -----------------------------------------------------------*/
-#define TIM_CLOCK                   108000000
-#define SAMPLING_FREQUENCY          8000
-#define TIM2_PRESCALER              100
-#define TIM2_AUTORELOAD             (TIM_CLOCK / TIM2_PRESCALER / SAMPLING_FREQUENCY - 1)
+#define TIM_CLOCK                   108000000           // APB1 的频率，即 TIM 的时钟频率
+#define SAMPLING_FREQUENCY          8000                // ADC 采样频率
+#define TIM2_PRESCALER              100                 // TIM2 的预分频系数
+#define TIM2_AUTORELOAD             (TIM_CLOCK / TIM2_PRESCALER / SAMPLING_FREQUENCY - 1)       // 在👆上述条件下的 TIM2 
 
-#define TIM5_PRESCALER              108
+#define TIM5_PRESCALER              108         // TIM5 的预分频系数
 
-#define ADC_BATCH_POINTS            1024
+#define ADC_BATCH_POINTS            1024        // 一次 DMA 传送 ADC 采集点数
 
-#define AUDIO_LENGTH                20
+#define AUDIO_LENGTH                20          // 录音长度，单位：秒 s
 
-#define THREAD_SLEEP_TIME           2
+#define THREAD_SLEEP_TIME           2           // 线程休眠时间，单位：毫秒 ms
 
 
 

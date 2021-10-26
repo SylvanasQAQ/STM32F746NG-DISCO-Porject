@@ -50,6 +50,7 @@ static FRESULT ScanFiles(char* path,WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode);
 */
 
 // USER START (Optionally insert additional static data)
+extern WM_HWIN hListView;
 // USER END
 
 /*********************************************************************
@@ -88,6 +89,10 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   TREEVIEW_ITEM_Handle   hTreeItemCur;
   TREEVIEW_ITEM_Handle   hTreeItem_SDCard;
   WM_HWIN                hTree;
+  char                trackBuf[100];
+  char                pathBuf[100];
+  uint16_t                numRows;
+  uint16_t                len;
   // USER END
 
   switch (pMsg->MsgId) {
@@ -176,6 +181,33 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        hTree = WM_GetDialogItem(pMsg->hWin, ID_TREEVIEW_0);
+        TREEVIEW_ITEM_GetText(hTreeItemCur = TREEVIEW_GetSel(hTree), trackBuf, 100);
+        while(1)
+        {
+          hTreeItemCur = TREEVIEW_GetItem(hTree, hTreeItemCur, TREEVIEW_GET_PARENT);
+          TREEVIEW_ITEM_GetText(hTreeItemCur, pathBuf, 100);
+          if(strcmp(pathBuf, "SDCard[0:]") == 0)
+          {
+            pathBuf[0] = '/';
+            pathBuf[1] = '\0';
+            strcat(pathBuf, trackBuf);
+            strcpy(trackBuf, pathBuf);
+            break;
+          }
+          else{
+            len = strlen(pathBuf);
+            pathBuf[len] = '/';
+            pathBuf[len+1] = '\0';
+            strcat(pathBuf, trackBuf);
+            strcpy(trackBuf, pathBuf);
+          }
+        }
+        
+        LISTVIEW_AddRow(hListView, NULL);
+        numRows = LISTVIEW_GetNumRows(hListView);
+        LISTVIEW_SetItemText(hListView, 0, numRows-1, trackBuf);
+        
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -266,7 +298,7 @@ static FRESULT ScanFiles(char *path, WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode)
   fno.lfsize = sizeof(lfn);
 #endif
 
-  res = f_opendir(&dir, path); /* Open the directory */
+  res = f_opendir(&dir, (const TCHAR*) path); /* Open the directory */
   if (res == FR_OK)
   {
     for (;;)
@@ -275,7 +307,7 @@ static FRESULT ScanFiles(char *path, WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode)
       if (res != FR_OK || fno.fname[0] == 0)
         break; 
 
-      strcpy(path_other, fno.fname);
+      strcpy(path_other, (const char *) fno.fname);
       path_other[6] = '\0';
       if (fno.fname[0] == '.' || !strcmp(path_other, "SYSTEM") || !strcmp(path_other, "SPOTLI") || !strcmp(path_other, "FSEVEN"))
         continue;
@@ -283,7 +315,7 @@ static FRESULT ScanFiles(char *path, WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode)
 #if _USE_LFN
       fn = *fno.lfname ? fno.lfname : fno.fname;
 #else
-      fn = fno.fname;
+      fn = (char *) fno.fname;
 #endif
 
       if ((fno.fattrib & AM_DIR) && fn[0] != '.') /* It is a directory */
@@ -310,7 +342,7 @@ static FRESULT ScanFiles(char *path, WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode)
       {
         if (hTree != NULL && hNode != NULL) //创建目录树
         {
-          hItem = TREEVIEW_ITEM_Create(TREEVIEW_ITEM_TYPE_LEAF, fn, 0);          //文件，创建树叶
+          hItem = TREEVIEW_ITEM_Create(TREEVIEW_ITEM_TYPE_LEAF, fn, 0);          //文件，创建树叶 fn
           TREEVIEW_AttachItem(hTree, hItem, hNode, TREEVIEW_INSERT_FIRST_CHILD); //把树叶添加到目录树
         }
         printf("%s/%s--%ld\n", path, fn, fno.fsize);

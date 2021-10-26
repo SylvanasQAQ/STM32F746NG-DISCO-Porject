@@ -50,6 +50,8 @@
 
 // USER START (Optionally insert additional static data)
 extern WM_HWIN CreateFileDialog(void);
+
+WM_HWIN hListView;
 // USER END
 
 /*********************************************************************
@@ -136,7 +138,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
     BUTTON_SetText(hItem, "Del Files");
     // USER START (Optionally insert additional code for further widget initialization)
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTVIEW_0);
+    hListView = hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTVIEW_0);
     LISTVIEW_SetGridVis(hItem, 0);
     LISTVIEW_SetAutoScrollV(hItem, 1);
     LISTVIEW_SetBkColor(hItem, LISTVIEW_CI_UNSEL, GUI_WHITE);
@@ -146,6 +148,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     LISTVIEW_SetRowHeight(hItem, 20);
     LISTVIEW_SetBkColor(hItem, LISTVIEW_CI_SELFOCUS, GUI_LIGHTBLUE);
     LISTVIEW_SetTextColor(hItem, LISTVIEW_CI_SELFOCUS, GUI_WHITE);
+    LISTVIEW_DeleteAllRows(hListView);
     //WIDGET_SetEffect(hItem, &WIDGET_Effect_None);
     // USER END
     break;

@@ -10,12 +10,12 @@
 
 typedef struct
 {
-    char riff_id[4];   //"RIFF"
+    char riff_id[5];   //"RIFF"
     int riff_datasize; // RIFF chunk data size,exclude riff_id[4] and riff_datasize,total - 8
 
-    char riff_type[4]; // "WAVE"
+    char riff_type[5]; // "WAVE"
 
-    char fmt_id[4];             // "fmt "
+    char fmt_id[5];             // "fmt "
     int fmt_datasize;           // fmt chunk data size,16 for pcm
     short fmt_compression_code; // 1 for PCM
     short fmt_channels;         // 1(mono) or 2(stereo)
@@ -24,7 +24,7 @@ typedef struct
     short fmt_block_align;      // number bytes per sample, bit_per_sample * channels / 8
     short fmt_bit_per_sample;   // bits of each sample(8,16,32).
 
-    char data_id[4];   // "data"
+    char data_id[5];   // "data"
     int data_datasize; // data chunk size,pcm_size - 44
 } WaveHeader_t;
 
