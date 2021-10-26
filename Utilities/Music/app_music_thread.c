@@ -15,7 +15,7 @@
 #define TIM_CLOCK           108000000       // APB1 的频率，即 TIM 的时钟频率
 #define DMA_BATCH           4096            // DMA 一次传送的数据量
 #define WAV_HEADER_PRINT    0               // 打印 wav 文件头信息
-#define SD_READ_BATCH       (2*1024*256)    // 一次读写 SD 卡 2*256 KB 的内容
+#define SD_READ_BATCH       (2*1024*512)    // 一次读写 SD 卡 1 MB 的内容
 
 
 
@@ -240,6 +240,7 @@ static void WavCacheUpdate()
             else
                 usWavCacheHalfUsed = 0;
             offset = uiWavPlayIndex - (uiWavPlayIndex % SD_READ_BATCH);
+            Storage_Thread_Read(&wavFile, offset, ucWavData, SD_READ_BATCH);
         }
         else                                // 正常双缓存策略
         {
@@ -327,7 +328,7 @@ static void Storage_Thread_Read(FIL *fp, uint64_t offset, void *buff, uint32_t s
 
     Storage_Read_pBuffer = buff;
     Storage_Read_pFile = fp;
-    fp->fptr = ulWavPcmStart + offset;
+    f_lseek(fp, ulWavPcmStart + offset);
     Storage_Read_uiSize = size;
     Storage_Read_Request = 1;
 }
