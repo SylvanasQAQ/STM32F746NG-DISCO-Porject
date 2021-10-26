@@ -4,26 +4,38 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "fatfs.h"
 #include "main.h"
+#include "fatfs.h"
 #include "usb_device.h"
 
 
 
 /* Defines ------------------------------------------------------------------*/
-#define SD_BLOCKSIZE 512
+#define SD_BLOCKSIZE                    512
+#define SD_SCAN_FILES_ENABLE            0           // 是否开机扫描 sd 卡文件
+
+#define SD_READ_BATCH                   (2*1024*1024)       // 一次读写 SD 卡 2MB 的内容
 
 
 
 /* Functions prototypes ---------------------------------------------*/
 static void StorageThread(void *argument);
-static FRESULT scan_files(char *path);
+static FRESULT ScanFiles(char *path);
+static void InitFatFS();
+static void ReadFile();
 
 
 
 /* Private variables -----------------------------------------------------------*/
-FRESULT ret[4];
-char pwd[20];
+
+
+uint16_t        Fatfs_OK = 0;
+FIL*            Storage_Read_pFile;
+uint8_t*        Storage_Read_pBuffer;
+uint32_t        Storage_Read_uiSize;
+uint32_t        Storage_Read_uiNum;
+
+uint16_t        Storage_Read_Request;
 
 
 
@@ -42,6 +54,7 @@ const osThreadAttr_t storageTask_attributes = {
 #endif
 
 
+
 /**
  * @brief  Storage Thread 的包装函数，用于 osThreadNew()
  * @param  None
@@ -50,7 +63,7 @@ const osThreadAttr_t storageTask_attributes = {
 void vStorageTaskCreate()
 {
 #ifdef CMSIS_V1
-    xTaskCreate(StorageThread, "Storage Task", 256, NULL, osPriorityLow, &storageTaskHandle);
+    xTaskCreate(StorageThread, "Storage Task", 512, NULL, (UBaseType_t)osPriorityLow, &storageTaskHandle);
 #endif
 
 #ifdef CMSIS_V2
@@ -64,103 +77,91 @@ void vStorageTaskCreate()
 
 static void StorageThread(void *argument)
 {
-    MX_USB_DEVICE_Init();
-    MX_FATFS_Init();
-
-    //uctsk_lua_init();
-
-    ret[0] = f_mount(&SDFatFS, "", 0);
-    if (ret[0] == FR_OK)
+    if(Fatfs_OK == 0)
     {
-        ret[1] = f_open(&SDFile, "test.txt", FA_CREATE_ALWAYS | FA_WRITE);
-        if (ret[1] == FR_OK)
-        {
-            ret[2] = f_printf(&SDFile, "Hello %d\n", 112);
-            ret[3] = f_close(&SDFile);
-            printf("FAT fs OK!\n");
-        }
+        InitFatFS();
     }
-
-    // #ifdef CMSIS_V1
-    //     vTaskDelete(storageTaskHandle);
-    // #endif
-    // #ifdef CMSIS_V2
-    //     osThreadTerminate(storageTaskHandle);
-    // #endif
-    scan_files("");
-    PlayMusic();
 
     for (;;)
     {
-        osDelay(1);
+        ReadFile();
+
+//         if (Storage_Read_Request == 0)
+//         {
+// #ifdef CMSIS_V1
+//             vTaskDelete(storageTaskHandle);
+// #endif
+// #ifdef CMSIS_V2
+//             osThreadTerminate(storageTaskHandle);
+// #endif
+//         }
+
+        osDelay(10);
     }
 }
 
-#define TIM_CLOCK 108000000
-#define DMA_BATCH 4096
-#define WAV_VOLUME 1
 
-uint32_t uiPuleseBuf[DMA_BATCH];
-uint8_t *usWavData = (uint8_t *)(SDRAM_WRITE_READ_ADDR + 0x2000);
-uint32_t autoReload, uiIndex = 0;
-uint32_t num = 1;
-extern TIM_HandleTypeDef htim5;
-extern TIM_HandleTypeDef htim3;
-WaveHeader_t wavHeader;
 
-void PlayMusic(void)
+
+/**
+ * @brief  初始化 FAT 文件系统
+ * @param  None
+ * @retval None
+ */
+static void InitFatFS()
 {
+    FRESULT fatfs_ret[4];
 
-    //ret[1] = f_open(&SDFile, "TKZC.wav", FA_READ);
-    // if(ret[1] != FR_OK)
-      //   ret[2] = f_open(&SDFile, "TianKong.wav", FA_READ);
-    // if(ret[2] != FR_OK)
-    //      ret[1] = f_open(&SDFile, "The_Dawn.wav", FA_READ);
-    ret[2] = f_open(&SDFile, "The_Dawn.wav", FA_READ);
 
-    read_wavheader(&SDFile, &wavHeader);
-    ret[2] = f_read(&SDFile, usWavData, wavHeader.data_datasize, &num);
-    print_wavheader(wavHeader);
-    if(num == 0)
-        return;
+    MX_USB_DEVICE_Init();
+    MX_FATFS_Init();
 
-    autoReload = TIM_CLOCK / wavHeader.fmt_sample_rate;
+    fatfs_ret[0] = f_mount(&SDFatFS, "", 0);
+    if (fatfs_ret[0] == FR_OK)
+    {
+        fatfs_ret[1] = f_open(&SDFile, "test.txt", FA_CREATE_ALWAYS | FA_WRITE);
+        if (fatfs_ret[1] == FR_OK)
+        {
+            fatfs_ret[2] = f_printf(&SDFile, "Hello %d\n", 112);
+            fatfs_ret[3] = f_close(&SDFile);
+            printf("FAT fs OK!\n");
+            f_unlink("test.txt");
 
-    for (uint32_t i = 0; i < DMA_BATCH; i++)
-        uiPuleseBuf[i] = autoReload * usWavData[uiIndex++] / (0xff) / WAV_VOLUME;
-
-    __HAL_TIM_SET_PRESCALER(&htim5, 0);
-    __HAL_TIM_SetAutoreload(&htim5, autoReload);
-    __HAL_TIM_SetCounter(&htim5, 0);
-
-    HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);
-}
-
-uint32_t count = 0;
-uint16_t *p;
-void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
-{
-    if (uiIndex < wavHeader.riff_datasize)
-        HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);
-    else{
-        HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_4);
-        f_close(&SDFile);
+            Fatfs_OK = 1;
+            if (SD_SCAN_FILES_ENABLE)
+                ScanFiles("");
+        }
+        else
+            printf("Error while opening a file!\n");
     }
-    for (uint32_t i = DMA_BATCH / 2; i < DMA_BATCH; i++)
-        uiPuleseBuf[i] = autoReload * usWavData[uiIndex++]/ (0xff) / WAV_VOLUME;
-
-    count++;
 }
 
-void HAL_TIM_PWM_PulseFinishedHalfCpltCallback(TIM_HandleTypeDef *htim)
+
+
+/**
+ * @brief  读取 SD 卡某个文件的内容到 `Storage_Read_pBuffer` 指定的区域
+ * @param  None
+ * @retval None
+ */
+static void ReadFile()
 {
-    for (uint32_t i = 0; i < DMA_BATCH / 2; i++)
-        uiPuleseBuf[i] = autoReload * usWavData[uiIndex++] / (0xff) / WAV_VOLUME;
+    if(Storage_Read_Request)
+    {
+        f_read(Storage_Read_pFile, Storage_Read_pBuffer, Storage_Read_uiSize, &Storage_Read_uiNum);
+        Storage_Read_Request = 0;
+    }
 }
 
-static FRESULT scan_files(char *path)
+
+
+/**
+ * @brief  扫描 SD 卡指定目录下所有文件
+ * @param  char* path
+ * @retval None
+ */
+static FRESULT ScanFiles(char *path)
 {
-    char path_other[255] = {0}; //目录 长度
+    char path_other[70] = {0}; //目录 长度
 
     FRESULT res;
     FILINFO fno;
@@ -179,7 +180,7 @@ static FRESULT scan_files(char *path)
 
             strcpy(path_other, fno.fname);
             path_other[6] = '\0';
-            if (fno.fname[0] == '.' || !strcmp(path_other, "SYSTEM") || !strcmp(path_other, "SPOTLI") || !strcmp(path_other, "FSEVEN"))
+            if (fno.fname[0] == '.' || !strcmp(path_other, "System") || !strcmp(path_other, "SPOTLI") || !strcmp(path_other, ".fseve"))
                 continue;
 
             fn = fno.fname;
@@ -190,7 +191,7 @@ static FRESULT scan_files(char *path)
                 sprintf(path_other, "%s/%s", path, fno.fname);
                 printf("%s/%s--%ld\n", path, fn, fno.fsize);
 
-                scan_files(path_other);
+                ScanFiles(path_other);
 
                 i++;
             }

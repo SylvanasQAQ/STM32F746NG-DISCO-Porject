@@ -1535,6 +1535,9 @@
         <group>
             <name>Music</name>
             <file>
+                <name>$PROJ_DIR$\..\Utilities\Music\app_music_thread.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Utilities\Music\wavDecoder.c</name>
             </file>
         </group>

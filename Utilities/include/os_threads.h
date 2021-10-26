@@ -28,6 +28,8 @@ extern TaskHandle_t app_freqAnalysisTaskHandle;
 
 //Storage thread handle
 extern TaskHandle_t storageTaskHandle;
+
+extern TaskHandle_t app_musicTaskHandle;
 #endif
 
 
@@ -47,6 +49,8 @@ extern osThreadId_t app_freqAnalysisTaskHandle;
 
 //Storage thread handle
 extern osThreadId_t storageTaskHandle;
+
+extern osThreadId_t app_musicTaskHandle;
 #endif
 
 
@@ -56,7 +60,7 @@ void vAlarmTaskCreate();
 void vAudioTaskCreate();
 void vFreqAnalysisTaskCreate();
 void vStorageTaskCreate();
-
+void vMusicTaskCreate();
 
 
 #endif

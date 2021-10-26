@@ -15,7 +15,7 @@
 #define TIM_CLOCK                   108000000           // APB1 的频率，即 TIM 的时钟频率
 #define SAMPLING_FREQUENCY          8000                // ADC 采样频率
 #define TIM2_PRESCALER              100                 // TIM2 的预分频系数
-#define TIM2_AUTORELOAD             (TIM_CLOCK / TIM2_PRESCALER / SAMPLING_FREQUENCY - 1)       // 在👆上述条件下的 TIM2 
+#define TIM2_AUTORELOAD             (TIM_CLOCK / TIM2_PRESCALER / SAMPLING_FREQUENCY - 1)       // 在👆上述条件下的 TIM2 autoreload
 
 #define TIM5_PRESCALER              108         // TIM5 的预分频系数
 
@@ -42,7 +42,7 @@ float32_t audio_fft_data[2048];                 // FFT 原始数据
 float32_t audio_fft_mag[512];                   // FFT 频率幅值
 
 uint16_t audio_main_freq[1024];                  // 提取到的音调
-uint16_t audio_main_freq_index = 0;            // 当前 index
+uint16_t audio_main_freq_index = 0;            // 当前记录位置 index
 
 // 一些音符的频率
 uint16_t music_frequencies[] = {65, 69, 73, 78, 82, 87, 92, 98, 103, 116, 123, 
@@ -114,6 +114,7 @@ static void AudioThread(void *argument)
 {
     extern ADC_HandleTypeDef hadc3;
     extern TIM_HandleTypeDef htim2;
+    extern TIM_HandleTypeDef htim5;
     extern GUI_HWIN hCurrentWindow;
     extern GUI_HWIN hAudioWindow;
 
@@ -122,6 +123,8 @@ static void AudioThread(void *argument)
     HAL_ADC_Start_IT(&hadc3);
     HAL_ADC_Start_DMA(&hadc3, (uint32_t *)audio_record_buffer, 1024);
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+    
+    __HAL_TIM_SET_PRESCALER(&htim5, 108-1);
 
 
     for(;;)

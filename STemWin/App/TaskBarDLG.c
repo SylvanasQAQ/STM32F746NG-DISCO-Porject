@@ -58,7 +58,9 @@ static void updateTaskBarMusicState(WM_HWIN hMusicImage);
 
 // USER START (Optionally insert additional static data)
 char taskBarTitle[50] = "10/11/2021  09:48:00 Mon";
-extern uint16_t Audio_Record_Replay;
+
+extern uint16_t        Audio_Record_Replay;
+extern U16             Music_Play_On;              // 音乐播放中标志
 // USER END
 
 /*********************************************************************
@@ -271,10 +273,10 @@ static void updateTaskBarMusicState(WM_HWIN hMusicImage)
 {
 	static uint8_t		musicState = 0;
 
-	if (musicState != Audio_Record_Replay)
+	if (musicState != Audio_Record_Replay | Music_Play_On)
 	{
-		musicState = Audio_Record_Replay;
-		if (Audio_Record_Replay == 1)
+		musicState = Audio_Record_Replay | Music_Play_On;
+		if (Audio_Record_Replay | Music_Play_On)
 		{
 			IMAGE_SetBitmap(hMusicImage, &bmMusic_enable);
 		}

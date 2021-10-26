@@ -21,6 +21,7 @@
 // USER START (Optionally insert additional includes)
 #include "fatfs.h"
 #include <stdio.h>
+#include "app_wavDecoder.h"
 // USER END
 
 #include "DIALOG.h"
@@ -39,7 +40,7 @@
 
 
 // USER START (Optionally insert additional defines)
-static FRESULT ScanFiles(char* path,WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode);
+
 // USER END
 
 /*********************************************************************
@@ -50,6 +51,9 @@ static FRESULT ScanFiles(char* path,WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode);
 */
 
 // USER START (Optionally insert additional static data)
+static FRESULT ScanFiles(char* path,WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode);
+static void AddFilesToMusicPlayerList(WM_HWIN hWin);
+
 extern WM_HWIN hListView;
 // USER END
 
@@ -89,10 +93,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   TREEVIEW_ITEM_Handle   hTreeItemCur;
   TREEVIEW_ITEM_Handle   hTreeItem_SDCard;
   WM_HWIN                hTree;
-  char                trackBuf[100];
-  char                pathBuf[100];
-  uint16_t                numRows;
-  uint16_t                len;
   // USER END
 
   switch (pMsg->MsgId) {
@@ -132,10 +132,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     hTreeItem_SDCard = TREEVIEW_ITEM_Create(TREEVIEW_ITEM_TYPE_NODE, "SDCard[0:]", 0);
     TREEVIEW_AttachItem(hTree, hTreeItem_SDCard, hTreeItemCur, TREEVIEW_INSERT_BELOW);
 
-    char buf[200];
-    memset(buf, 0x00, sizeof(buf));
-    strcat(buf, "");
-    ScanFiles(buf, hTree, hTreeItem_SDCard);
+    ScanFiles("", hTree, hTreeItem_SDCard);
 
     TREEVIEW_ITEM_Expand(TREEVIEW_GetSel(hTree));
     TREEVIEW_ITEM_ExpandAll(TREEVIEW_GetSel(hTree));
@@ -181,33 +178,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
-        hTree = WM_GetDialogItem(pMsg->hWin, ID_TREEVIEW_0);
-        TREEVIEW_ITEM_GetText(hTreeItemCur = TREEVIEW_GetSel(hTree), trackBuf, 100);
-        while(1)
-        {
-          hTreeItemCur = TREEVIEW_GetItem(hTree, hTreeItemCur, TREEVIEW_GET_PARENT);
-          TREEVIEW_ITEM_GetText(hTreeItemCur, pathBuf, 100);
-          if(strcmp(pathBuf, "SDCard[0:]") == 0)
-          {
-            pathBuf[0] = '/';
-            pathBuf[1] = '\0';
-            strcat(pathBuf, trackBuf);
-            strcpy(trackBuf, pathBuf);
-            break;
-          }
-          else{
-            len = strlen(pathBuf);
-            pathBuf[len] = '/';
-            pathBuf[len+1] = '\0';
-            strcat(pathBuf, trackBuf);
-            strcpy(trackBuf, pathBuf);
-          }
-        }
-        
-        LISTVIEW_AddRow(hListView, NULL);
-        numRows = LISTVIEW_GetNumRows(hListView);
-        LISTVIEW_SetItemText(hListView, 0, numRows-1, trackBuf);
-        
+        AddFilesToMusicPlayerList(pMsg->hWin);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -283,20 +254,98 @@ WM_HWIN CreateFileDialog(void) {
   return hWin;
 }
 
+
+
+
+/**
+ * @brief  扫描 SD 卡文件，构建树形视图
+ * @param  WM_HWIN    hWin：主窗口句柄
+ * @retval None
+ */
+static void AddFilesToMusicPlayerList(WM_HWIN hWin)
+{
+  WM_HWIN               hTree;
+  TREEVIEW_ITEM_Handle  hTreeItemCur;
+  char                  trackBuf[100];
+  char                  tmpBuf[100];
+  char                  pathBuf[100];
+  uint16_t              numRows;
+  uint16_t              len, i;
+  FIL                   fp;
+  WaveHeader_t          wavHeader;
+
+  hTree = WM_GetDialogItem(hWin, ID_TREEVIEW_0);
+  TREEVIEW_ITEM_GetText(hTreeItemCur = TREEVIEW_GetSel(hTree), trackBuf, 100);
+  while (1)
+  {
+    hTreeItemCur = TREEVIEW_GetItem(hTree, hTreeItemCur, TREEVIEW_GET_PARENT);
+    TREEVIEW_ITEM_GetText(hTreeItemCur, pathBuf, 100);
+    if (strcmp(pathBuf, "SDCard[0:]") == 0)
+    {
+      pathBuf[0] = '/';
+      pathBuf[1] = '\0';
+      strcat(pathBuf, trackBuf);
+      strcpy(trackBuf, pathBuf);
+      break;
+    }
+    else
+    {
+      len = strlen(pathBuf);
+      pathBuf[len] = '/';
+      pathBuf[len + 1] = '\0';
+      strcat(pathBuf, trackBuf);
+      strcpy(trackBuf, pathBuf);
+    }
+  }
+
+  // 排除相同的文件
+  for(i = 0; i < LISTVIEW_GetNumRows(hListView); i++)
+  {
+    LISTVIEW_GetItemText(hListView, 0, i, tmpBuf, 100);
+    if(strcmp(trackBuf, tmpBuf) == 0)
+      return;
+  }
+
+  // 在 listview 中添加新的一行
+  LISTVIEW_AddRow(hListView, NULL);
+  numRows = LISTVIEW_GetNumRows(hListView);
+  LISTVIEW_SetItemText(hListView, 0, numRows - 1, trackBuf);
+
+  if(f_open(&fp, trackBuf, FA_READ) == FR_OK)
+  {
+    read_wavheader(&fp, &wavHeader);
+    f_close(&fp);
+
+    len = wavHeader.data_datasize / wavHeader.fmt_sample_rate / (wavHeader.fmt_bit_per_sample / 8);
+    sprintf(tmpBuf, "%02d:%02d",  len / 60, len % 60);
+    LISTVIEW_SetItemText(hListView, 1, numRows - 1, tmpBuf);
+  }
+}
+
+
+
+
+/**
+ * @brief  扫描 SD 卡文件，构建树形视图
+ * @param  char*    path：扫描路径
+ * @param  WM_HWIN  hTree：树形视图的句柄
+ * @param  TREEVIEW_ITEM_Handle hNode：树形视图的子节点
+ * @retval None
+ */
 static FRESULT ScanFiles(char *path, WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode)
 {
   FRESULT res;
   FILINFO fno;
   DIR dir;
   char *fn;                   /* This function is assuming non-Unicode cfg. */
-  char path_other[255] = {0}; //目录 长度
+  char path_other[50] = {0}; //目录 长度
   TREEVIEW_ITEM_Handle hItem;
 
-#if _USE_LFN
-  static char lfn[FILE_PATH_MAX] = {0}; /* Buffer to store the LFN */
-  fno.lfname = lfn;
-  fno.lfsize = sizeof(lfn);
-#endif
+// #if _USE_LFN
+//   static char lfn[_MAX_LFN + 1] = {0}; /* Buffer to store the LFN */
+//   fno.lfname = lfn;
+//   fno.lfsize = sizeof(lfn);
+// #endif
 
   res = f_opendir(&dir, (const TCHAR*) path); /* Open the directory */
   if (res == FR_OK)
@@ -309,14 +358,14 @@ static FRESULT ScanFiles(char *path, WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode)
 
       strcpy(path_other, (const char *) fno.fname);
       path_other[6] = '\0';
-      if (fno.fname[0] == '.' || !strcmp(path_other, "SYSTEM") || !strcmp(path_other, "SPOTLI") || !strcmp(path_other, "FSEVEN"))
+      if (fno.fname[0] == '.' || !strcmp(path_other, "System") || !strcmp(path_other, "SPOTLI"))
         continue;
 
-#if _USE_LFN
-      fn = *fno.lfname ? fno.lfname : fno.fname;
-#else
+// #if _USE_LFN
+//       fn = *fno.lfname ? fno.lfname : fno.fname;
+// #else
       fn = (char *) fno.fname;
-#endif
+// #endif
 
       if ((fno.fattrib & AM_DIR) && fn[0] != '.') /* It is a directory */
       {
@@ -330,8 +379,7 @@ static FRESULT ScanFiles(char *path, WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode)
 
         //在路径最后添加文件夹路径名
         memset(path_other, 0, sizeof(path_other));
-        sprintf(path_other, "%s/%s", path, fno.fname);
-        printf("%s/%s--%ld\n", path, fn, fno.fsize);
+        sprintf(path_other, "%s/%s", path, fn);
 
         //遍历此新文件夹下的文件
         res = ScanFiles(path_other, hTree, hItem);
@@ -345,7 +393,6 @@ static FRESULT ScanFiles(char *path, WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode)
           hItem = TREEVIEW_ITEM_Create(TREEVIEW_ITEM_TYPE_LEAF, fn, 0);          //文件，创建树叶 fn
           TREEVIEW_AttachItem(hTree, hItem, hNode, TREEVIEW_INSERT_FIRST_CHILD); //把树叶添加到目录树
         }
-        printf("%s/%s--%ld\n", path, fn, fno.fsize);
       }
     }
     f_closedir(&dir);

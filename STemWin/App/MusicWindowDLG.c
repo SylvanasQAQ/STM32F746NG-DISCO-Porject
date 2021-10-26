@@ -19,6 +19,8 @@
 */
 
 // USER START (Optionally insert additional includes)
+#include <string.h>
+#include "os_threads.h"
 // USER END
 
 #include "DIALOG.h"
@@ -29,13 +31,16 @@
 *
 **********************************************************************
 */
-#define ID_WINDOW_0 (GUI_ID_USER + 0x0D)
-#define ID_LISTVIEW_0 (GUI_ID_USER + 0x0E)
-#define ID_BUTTON_0 (GUI_ID_USER + 0x10)
-#define ID_BUTTON_1 (GUI_ID_USER + 0x11)
-#define ID_BUTTON_2 (GUI_ID_USER + 0x12)
-#define ID_BUTTON_3 (GUI_ID_USER + 0x13)
-#define ID_BUTTON_4 (GUI_ID_USER + 0x15)
+#define ID_WINDOW_0 (GUI_ID_USER + 0x00)
+#define ID_LISTVIEW_0 (GUI_ID_USER + 0x01)
+#define ID_BUTTON_0 (GUI_ID_USER + 0x02)
+#define ID_BUTTON_1 (GUI_ID_USER + 0x03)
+#define ID_BUTTON_2 (GUI_ID_USER + 0x04)
+#define ID_BUTTON_3 (GUI_ID_USER + 0x05)
+#define ID_BUTTON_4 (GUI_ID_USER + 0x06)
+#define ID_SLIDER_0 (GUI_ID_USER + 0x07)
+#define ID_TEXT_0 (GUI_ID_USER + 0x08)
+#define ID_TEXT_1 (GUI_ID_USER + 0x09)
 
 
 // USER START (Optionally insert additional defines)
@@ -50,8 +55,24 @@
 
 // USER START (Optionally insert additional static data)
 extern WM_HWIN CreateFileDialog(void);
+static void PlayButtonEventHandler(WM_MESSAGE * pMsg);
+static void NextButtonEventHandler();
+static void TimerCallbackHandler(WM_MESSAGE * pMsg);
+static void SliderCallbackHandler(WM_MESSAGE * pMsg);
 
 WM_HWIN hListView;
+
+extern U16             Music_Play_Start;            // 音乐开始标志
+extern U16             Music_Play_On;               // 音乐播放中标志
+extern U16             Music_Thread_Exist;          // 音乐后台线程运行标志
+
+extern uint32_t        uiMusicCurrentMinute;       // 音乐播放进度——分钟
+extern uint32_t        uiMusicCurrentSecond;       // 音乐播放进度——秒
+extern uint32_t        uiMusicCurrentProgress;     // 音乐播放进度——百分比
+extern uint32_t        uiWavPlayIndex, uiWavSampleRate, uiWavSampleDepth, uiWavDataLength;
+
+U16                    Music_Item_Current = 0;
+char musicPath[100];
 // USER END
 
 /*********************************************************************
@@ -60,12 +81,15 @@ WM_HWIN hListView;
 */
 static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { WINDOW_CreateIndirect, "MusicWindow", ID_WINDOW_0, 0, 0, 480, 242, 0, 0x0, 0 },
-  { LISTVIEW_CreateIndirect, "Listview", ID_LISTVIEW_0, 112, 10, 230, 157, 0, 0x0, 0 },
-  { BUTTON_CreateIndirect, "FileButton", ID_BUTTON_0, 15, 8, 80, 40, 0, 0x0, 0 },
+  { LISTVIEW_CreateIndirect, "Listview", ID_LISTVIEW_0, 255, 0, 220, 160, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "FileButton", ID_BUTTON_0, 320, 195, 70, 40, 0, 0x0, 0 },
   { BUTTON_CreateIndirect, "PlayButton", ID_BUTTON_1, 10, 196, 40, 40, 0, 0x0, 0 },
   { BUTTON_CreateIndirect, "PauseButton", ID_BUTTON_2, 60, 196, 60, 40, 0, 0x0, 0 },
   { BUTTON_CreateIndirect, "NextButton", ID_BUTTON_3, 130, 195, 40, 40, 0, 0x0, 0 },
-  { BUTTON_CreateIndirect, "Button", ID_BUTTON_4, 15, 60, 80, 40, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "DelButton", ID_BUTTON_4, 400, 195, 70, 40, 0, 0x0, 0 },
+  { SLIDER_CreateIndirect, "Slider", ID_SLIDER_0, 12, 168, 400, 20, 0, 0x0, 0 },
+  { TEXT_CreateIndirect, "ProgText", ID_TEXT_0, 420, 166, 47, 20, 0, 0x64, 0 },
+  { TEXT_CreateIndirect, "SongText", ID_TEXT_1, 16, 139, 239, 20, 0, 0x64, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -102,7 +126,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     // Initialization of 'Listview'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTVIEW_0);
-    LISTVIEW_AddColumn(hItem, 180, "Track", GUI_TA_HCENTER | GUI_TA_VCENTER);
+    LISTVIEW_AddColumn(hItem, 165, "Track", GUI_TA_HCENTER | GUI_TA_VCENTER);
     LISTVIEW_AddColumn(hItem, 50, "Duration", GUI_TA_HCENTER | GUI_TA_VCENTER);
     LISTVIEW_AddRow(hItem, NULL);
     LISTVIEW_SetRowHeight(hItem, 20);
@@ -132,11 +156,27 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
     BUTTON_SetText(hItem, "Next");
     //
-    // Initialization of 'Button'
+    // Initialization of 'DelButton'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_4);
     BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
     BUTTON_SetText(hItem, "Del Files");
+    //
+    // Initialization of 'ProgText'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
+    TEXT_SetTextAlign(hItem, GUI_TA_LEFT | GUI_TA_VCENTER);
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x008000FF));
+    TEXT_SetFont(hItem, GUI_FONT_16B_ASCII);
+    TEXT_SetText(hItem, "00:00");
+    //
+    // Initialization of 'SongText'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_1);
+    TEXT_SetText(hItem, "Playing: null");
+    TEXT_SetTextAlign(hItem, GUI_TA_LEFT | GUI_TA_VCENTER);
+    TEXT_SetFont(hItem, GUI_FONT_16B_ASCII);
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x00FF0000));
     // USER START (Optionally insert additional code for further widget initialization)
     hListView = hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTVIEW_0);
     LISTVIEW_SetGridVis(hItem, 0);
@@ -150,6 +190,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     LISTVIEW_SetTextColor(hItem, LISTVIEW_CI_SELFOCUS, GUI_WHITE);
     LISTVIEW_DeleteAllRows(hListView);
     //WIDGET_SetEffect(hItem, &WIDGET_Effect_None);
+
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0);
+    SLIDER_SetRange(hItem, 0, 100);
+    SLIDER_SetNumTicks(hItem, 100);
+    
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -197,6 +242,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        PlayButtonEventHandler(pMsg);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -211,6 +257,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        Music_Play_On = 0;
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -225,19 +272,40 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        NextButtonEventHandler();
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
       // USER END
       }
       break;
-    case ID_BUTTON_4: // Notifications sent by 'Button'
+    case ID_BUTTON_4: // Notifications sent by 'DelButton'
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        LISTVIEW_DeleteRow(hListView, LISTVIEW_GetSel(hListView));
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
+    case ID_SLIDER_0: // Notifications sent by 'Slider'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        SliderCallbackHandler(pMsg);
+        // USER END
+        break;
+      case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
         // USER END
         break;
@@ -250,6 +318,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     }
     break;
   // USER START (Optionally insert additional message handling)
+  case WM_TIMER:
+    TimerCallbackHandler(pMsg);
   // USER END
   default:
     WM_DefaultProc(pMsg);
@@ -279,6 +349,116 @@ WM_HWIN CreateMusicWindow(void) {
 void MoveToMusicWindow(WM_HWIN hWin)
 {
   
+}
+
+
+/**
+ * @brief  Play 按键的回调函数
+ * @param  WM_MESSAGE * pMsg
+ * @retval None
+ */
+static void PlayButtonEventHandler(WM_MESSAGE * pMsg)
+{
+  if (LISTVIEW_GetNumRows(hListView) > 0)
+  {
+    Music_Item_Current = LISTVIEW_GetSel(hListView);
+    if (Music_Item_Current == 0xffff)     // 未选中任何 row
+      Music_Item_Current = 0;             // 默认播放第一个文件
+
+    LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);     // 获取文件名
+
+    Music_Play_Start = 1;         // 置位播放标志
+    if (!Music_Thread_Exist)      // 如果音乐线程未启动，则新建一个线程
+    {
+      Music_Thread_Exist = 1;
+      vMusicTaskCreate();
+      WM_CreateTimer(pMsg->hWin, 0, 100, 0);
+    }
+  }
+}
+
+
+/**
+ * @brief  Next 按键的回调函数
+ * @param  None
+ * @retval None
+ */
+static void NextButtonEventHandler()
+{
+  if (LISTVIEW_GetNumRows(hListView) > 0)
+  {
+    Music_Item_Current = (Music_Item_Current + 1) % LISTVIEW_GetNumRows(hListView);
+    LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);
+    Music_Play_Start = 1;
+  }
+}
+
+
+
+/**
+ * @brief  滑块的回调函数
+ * @param  WM_MESSAGE * pMsg
+ * @retval None
+ */
+static void SliderCallbackHandler(WM_MESSAGE * pMsg)
+{
+  uint32_t      sliderVal;
+
+  sliderVal = SLIDER_GetValue(WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0));
+  uiWavPlayIndex = sliderVal * uiWavDataLength / 100;
+}
+
+
+
+/**
+ * @brief  定时器的回调函数
+ * @param  WM_MESSAGE * pMsg
+ * @retval None
+ */
+static void TimerCallbackHandler(WM_MESSAGE * pMsg)
+{
+  WM_HWIN       hItem;
+  char          progBuffer[16];
+  char          musicName[32], tmpBuffer[32];
+  short         i, j, count = 0;
+
+  if(Music_Thread_Exist){
+    uiMusicCurrentSecond = uiWavPlayIndex / uiWavSampleRate / (uiWavSampleDepth / 8) % 60;
+    uiMusicCurrentMinute = uiWavPlayIndex / uiWavSampleRate / (uiWavSampleDepth / 8) / 60;
+    uiMusicCurrentProgress = uiWavPlayIndex * 100 / uiWavDataLength;
+
+    sprintf(progBuffer, "%02d:%02d", uiMusicCurrentMinute, uiMusicCurrentSecond);
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
+    TEXT_SetText(hItem, progBuffer);
+
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0);
+    SLIDER_SetValue(hItem, uiMusicCurrentProgress);
+
+    count++;
+    if(count % 5)
+      LISTVIEW_SetSel(hListView, Music_Item_Current);
+
+    LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicName, 32);
+    for (i = strlen(musicName) - 1; i > -1; i--)
+      if (musicName[i] == '/')
+        break;
+    for (j = 0, i++; musicName[i] != '.';)
+      musicName[j++] = musicName[i++];
+    musicName[j] = '\0';
+    sprintf(tmpBuffer, "Playing: %s", musicName);
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_1);
+    TEXT_SetText(hItem, tmpBuffer);
+
+#ifdef CMSIS_V1
+    WM_RestartTimer(pMsg->Data.v, 1000);
+#endif
+
+#ifdef CMSIS_V2
+    WM_RestartTimer(pMsg->Data.v, 200000000);
+#endif
+  }
+  else
+    WM_DeleteTimer(pMsg->Data.v);
 }
 // USER END
 
