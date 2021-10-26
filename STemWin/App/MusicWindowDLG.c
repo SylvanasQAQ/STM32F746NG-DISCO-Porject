@@ -69,6 +69,7 @@ extern U16             Music_Thread_Exist;          // 音乐后台线程运行�
 extern uint32_t        uiMusicCurrentMinute;       // 音乐播放进度——分钟
 extern uint32_t        uiMusicCurrentSecond;       // 音乐播放进度——秒
 extern uint32_t        uiMusicCurrentProgress;     // 音乐播放进度——百分比
+extern uint16_t        usWavCacheInvalid; 
 extern uint32_t        uiWavPlayIndex, uiWavSampleRate, uiWavSampleDepth, uiWavDataLength;
 
 U16                    Music_Item_Current = 0;
@@ -406,6 +407,8 @@ static void SliderCallbackHandler(WM_MESSAGE * pMsg)
 
   sliderVal = SLIDER_GetValue(WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0));
   uiWavPlayIndex = sliderVal * uiWavDataLength / 100;
+
+  usWavCacheInvalid = 1;
 }
 
 
@@ -435,8 +438,10 @@ static void TimerCallbackHandler(WM_MESSAGE * pMsg)
     SLIDER_SetValue(hItem, uiMusicCurrentProgress);
 
     count++;
-    if(count % 5)
+    if(count > 5){
+      count = 0;
       LISTVIEW_SetSel(hListView, Music_Item_Current);
+    }
 
     LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicName, 32);
     for (i = strlen(musicName) - 1; i > -1; i--)
