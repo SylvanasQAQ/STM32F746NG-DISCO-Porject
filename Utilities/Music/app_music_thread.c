@@ -325,10 +325,10 @@ static void Storage_Thread_Read(FIL *fp, uint64_t offset, void *buff, uint32_t s
     extern uint32_t Storage_Read_uiSize;
     extern uint32_t Storage_Read_uiNum;
     extern uint16_t Storage_Read_Request;
-
-    Storage_Read_pBuffer = buff;
+    
     Storage_Read_pFile = fp;
     f_lseek(fp, ulWavPcmStart + offset);
+    Storage_Read_pBuffer = buff;
     Storage_Read_uiSize = size;
     Storage_Read_Request = 1;
 }

@@ -9,7 +9,10 @@ int read_wavheader(FIL *fp, WaveHeader_t *wavheader)
 {
     if (fp == NULL)
         return -1;
-    uint32_t len = 1;
+
+    uint32_t    len;
+    uint64_t    fptr = fp->fptr;
+
     f_read(fp, wavheader->riff_id, 4, &len);
     wavheader->riff_id[4] = '\0';
     f_read(fp, (char*)&wavheader->riff_datasize, 4, &len);
@@ -30,7 +33,7 @@ int read_wavheader(FIL *fp, WaveHeader_t *wavheader)
 
     if (strcmp(wavheader->data_id, "data") != 0)
     {
-        fp->fptr += wavheader->data_datasize;
+        f_lseek(fp, fp->fptr - fptr + wavheader->data_datasize);
         f_read(fp, wavheader->data_id, 4, &len);
         f_read(fp, (char*)&wavheader->data_datasize, 4, &len);
     }
