@@ -18,5 +18,5 @@ extern GUI_CONST_STORAGE GUI_BITMAP bmMusic_disable;
 extern GUI_CONST_STORAGE GUI_BITMAP bmMic;
 extern GUI_CONST_STORAGE GUI_BITMAP bmFreq;
 extern GUI_CONST_STORAGE GUI_BITMAP bmMusic;
-
+extern GUI_CONST_STORAGE GUI_BITMAP bmAlarmSmall;
 #endif

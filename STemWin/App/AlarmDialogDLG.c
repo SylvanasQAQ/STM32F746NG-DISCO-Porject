@@ -47,10 +47,12 @@
 
 // USER START (Optionally insert additional static data)
 static uint16_t dialog_type = 0;
+extern U16             Music_Play_On;              // 音乐播放中标志
 
 static void ButtonEventProcess(WM_MESSAGE * pMsg);
 
 extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim5;
 extern void MoveToAlarmWindow(WM_HWIN hWin);
 extern WM_HWIN hAlarmWindow;
 // USER END
@@ -203,6 +205,10 @@ static void ButtonEventProcess(WM_MESSAGE * pMsg)
   {
   case DIALOG_ALARM:
     __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2, 0);
+    if(Music_Play_On)
+      Music_Play_On = 0;
+    else
+      HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_4);
     GUI_EndDialog(pMsg->hWin, 0);
     MoveToAlarmWindow(hAlarmWindow);
     break;

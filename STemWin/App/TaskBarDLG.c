@@ -134,6 +134,10 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     #ifdef CMSIS_V2
     WM_CreateTimer(pMsg->hWin, 0, 200000, 0);
     #endif
+
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
+    TEXT_SetTextColor(hItem, GUI_BLUE);
+    TEXT_SetFont(hItem, &GUI_Font16B_ASCII);
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -206,27 +210,16 @@ static void updateTaskBar(WM_HWIN hWin)
   sprintf(taskBarTitle, "%02d/%02d/%d  %02d:%02d:%02d %s",
             os_date_month, os_date_day, os_date_year, os_time_hour, os_time_minute, os_time_second, os_date_weekday);
   hItem = WM_GetDialogItem(hWin, ID_TEXT_0);
-  TEXT_SetTextColor(hItem, GUI_BLUE);
-  TEXT_SetFont(hItem, &GUI_Font16B_ASCII);
   TEXT_SetText(hItem, taskBarTitle);
-
 
   updateTaskBarAlarmState(WM_GetDialogItem(hWin, ID_IMAGE_0));
   updateTaskBarMusicState(WM_GetDialogItem(hWin, ID_IMAGE_1));
 
   hItem = WM_GetDialogItem(hWin, ID_PROGBAR_0);
   PROGBAR_SetValue(hItem, osGetCPUUsage());
-  if (osGetCPUUsage() > 60)
-    PROGBAR_SetBarColor(hItem, 0, GUI_RED);
-  else
-    PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
 
   hItem = WM_GetDialogItem(hWin, ID_PROGBAR_1);
   PROGBAR_SetValue(hItem, osGetMemUsage());
-  if (osGetMemUsage() > 60)
-    PROGBAR_SetBarColor(hItem, 0, GUI_RED);
-  else
-    PROGBAR_SetBarColor(hItem, 0, GUI_GREEN);
 }
 
 
@@ -243,23 +236,9 @@ static void updateTaskBarAlarmState(WM_HWIN hAlarmImage)
 	{
 		alarmState = alarm_enabled;
 		if (alarmState == 1)
-		{
 			IMAGE_SetBitmap(hAlarmImage, &bmAlarm_enable);
-			//
-      vAlarmTaskCreate();     // 启动闹钟线程
-		}
 		else
-		{
 			IMAGE_SetBitmap(hAlarmImage, &bmAlarm_disable);
-
-      #ifdef CMSIS_V1
-			vTaskDelete(app_alarmTaskHandle);
-      #endif
-
-      #ifdef CMSIS_V2
-			osThreadTerminate(app_alarmTaskHandle);
-      #endif
-		}
 	}
 }
 
@@ -276,14 +255,10 @@ static void updateTaskBarMusicState(WM_HWIN hMusicImage)
 	if (musicState != Audio_Record_Replay | Music_Play_On)
 	{
 		musicState = Audio_Record_Replay | Music_Play_On;
-		if (Audio_Record_Replay | Music_Play_On)
-		{
+		if (musicState == 1)
 			IMAGE_SetBitmap(hMusicImage, &bmMusic_enable);
-		}
 		else
-		{
 			IMAGE_SetBitmap(hMusicImage, &bmMusic_disable);
-		}
 	}
 }
 // USER END

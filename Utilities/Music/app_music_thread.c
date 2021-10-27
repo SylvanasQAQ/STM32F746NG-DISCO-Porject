@@ -11,13 +11,14 @@
 #include "fatfs.h"
 #include "arm_math.h"
 #include "arm_common_tables.h"
+#include "os_threads.h"
 
 
 /* Defines ------------------------------------------------------------------*/
 #define TIM_CLOCK           108000000       // APB1 的频率，即 TIM 的时钟频率
 #define DMA_BATCH           1024            // DMA 一次传送的数据量
 #define WAV_HEADER_PRINT    0               // 打印 wav 文件头信息
-#define SD_READ_BATCH       (2*1024*256)    // 一次读写 SD 卡 0.5 MB 的内容
+#define SD_READ_BATCH       (2*1024*32)    // 一次读写 SD 卡 64KB 的内容
 
 #define FFT_DATA_POINTS     256             // 32 点大约可以cover 6K 的范围
 
@@ -38,6 +39,7 @@ static void WavCacheUpdate();
 extern TIM_HandleTypeDef htim5;         // TIM5 用于产生 PWM
 
 U16             Music_Play_Start = 0;            // 音乐开始标志
+U16             Music_Play_Restart = 0;          // 音乐重播标志
 U16             Music_Play_On  = 0;              // 音乐播放中标志
 U16             Music_Thread_Exist = 0;          // 音乐线程启动标志
 extern U16      Music_Item_Current;             // 当前播放音乐 index
@@ -45,6 +47,7 @@ char            currentMusicPath[100];              // 当前正在播放音乐�
 extern char     musicPath[100];                     // 音乐文件路径
 extern WM_HWIN  hListView;
 extern uint16_t Storage_Read_Request;
+extern uint16_t Storage_Thread_Exist;
 
 
 FIL             wavFile;
@@ -61,7 +64,7 @@ uint16_t        usWavCacheInvalid;              // wav 文件的缓存失效标�
 
 
 uint32_t        uiMusicVolumeN = 1;             // 音量系数——分子
-uint32_t        uiMusicVolumeD = 1;             // 音量系数——分母
+uint32_t        uiMusicVolumeD = 3;             // 音量系数——分母
 uint32_t        uiMusicCofficient;              // 计算 PWM 占空比时需要除去的系数
 
 uint32_t        uiMusicCurrentMinute = 0;       // 音乐播放进度——分钟
@@ -121,14 +124,15 @@ static void MusicThread(void *argument)
     extern GUI_HWIN hCurrentWindow;
     extern GUI_HWIN hMusicWindow;
 
+    Music_Thread_Exist = 1;
+    if(Storage_Thread_Exist == 0)
+        vStorageTaskCreate();           // 启动存储线程（用于后台读取文件
 
     for (;;)
     {
         
         PlayMusic();
         WavCacheUpdate();
-
-
 
 
         // 如果没有在音乐播放界面且后台没有播放音乐，终止线程以回收资源
@@ -160,8 +164,9 @@ static void PlayMusic()
         Music_Play_Start = 0;
         Music_Play_On = 1;
 
-        if (strcmp(musicPath, currentMusicPath) != 0) // 新歌曲播放
+        if (strcmp(musicPath, currentMusicPath) != 0 || Music_Play_Restart == 1) // 新歌曲播放
         {
+            Music_Play_Restart = 0;
             while(Storage_Read_Request)
                 osDelay(1);
             f_close(&wavFile);
@@ -230,7 +235,7 @@ static void PlayWavMusic(char * fileName)
 
 
     // 为第一次 DMA 启动准备数据
-    uiMusicCofficient = ((1 << uiWavSampleDepth) - 1) * uiMusicVolumeN / uiMusicVolumeD;
+    uiMusicCofficient = ((1 << uiWavSampleDepth) - 1) * uiMusicVolumeD / uiMusicVolumeN;
     for (uint32_t i = 0; i < DMA_BATCH; i++)
         uiPuleseBuf[i] = autoReload * ucWavData[uiWavPlayIndex++  % SD_READ_BATCH] / uiMusicCofficient;
 
@@ -255,12 +260,12 @@ static void WavCacheUpdate()
         if (usWavCacheInvalid == 1)         // 缓存失效事件，立即更新所有缓存
         {
             usWavCacheInvalid = 0;
-            if((uiWavPlayIndex % SD_READ_BATCH) * 2 / SD_READ_BATCH > 0)
-                usWavCacheHalfUsed = 1;
-            else
-                usWavCacheHalfUsed = 0;
+            usWavCacheHalfUsed = (uiWavPlayIndex % SD_READ_BATCH) * 2 / SD_READ_BATCH > 0 ?
+                                    1 : 0;
             offset = uiWavPlayIndex - (uiWavPlayIndex % SD_READ_BATCH);
-            Storage_Thread_Read(&wavFile, offset, ucWavData, SD_READ_BATCH);
+            size = offset + SD_READ_BATCH > uiWavDataLength ?
+                            uiWavDataLength - offset : SD_READ_BATCH;
+            Storage_Thread_Read(&wavFile, offset, ucWavData, size);
         }
         else                                // 正常双缓存策略
         {
@@ -268,10 +273,8 @@ static void WavCacheUpdate()
             {
                 usWavCacheHalfUsed = 1;
                 offset = uiWavPlayIndex - (uiWavPlayIndex % SD_READ_BATCH) + SD_READ_BATCH;
-                if(offset + SD_READ_BATCH / 2 > uiWavDataLength)
-                    size = uiWavDataLength - offset;
-                else
-                    size = SD_READ_BATCH / 2;
+                size = offset + SD_READ_BATCH / 2 > uiWavDataLength ?
+                            uiWavDataLength - offset : SD_READ_BATCH / 2;
                 Storage_Thread_Read(&wavFile, offset, ucWavData, size);
             }
 
@@ -279,10 +282,8 @@ static void WavCacheUpdate()
             {
                 usWavCacheHalfUsed = 0;
                 offset = uiWavPlayIndex - (uiWavPlayIndex % SD_READ_BATCH) + SD_READ_BATCH / 2;
-                if(offset + SD_READ_BATCH / 2 > uiWavDataLength)
-                    size = uiWavDataLength - offset;
-                else
-                    size = SD_READ_BATCH / 2;
+                size = offset + SD_READ_BATCH / 2 > uiWavDataLength ?
+                            uiWavDataLength - offset : SD_READ_BATCH / 2;
                 Storage_Thread_Read(&wavFile, offset, ucWavData + SD_READ_BATCH / 2, size);
             }
         }
@@ -312,14 +313,16 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
             {
                 f_close(&wavFile);
                 Music_Play_Start = 1;
-                Music_Item_Current = (Music_Item_Current + 1) % LISTVIEW_GetNumRows(hListView);
-                LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);        // 下一首
+                if(LISTVIEW_GetNumRows(hListView) != 0){
+                    Music_Item_Current = (Music_Item_Current + 1) % LISTVIEW_GetNumRows(hListView);
+                    LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);        // 下一首
+                }
             }
         }
 
-        uiMusicCofficient = ((1 << uiWavSampleDepth) - 1) * uiMusicVolumeN / uiMusicVolumeD;
+        uiMusicCofficient = ((1 << uiWavSampleDepth) - 1) * uiMusicVolumeD / uiMusicVolumeN;
         for (i = DMA_BATCH / 2; i < DMA_BATCH; i++)
-            uiPuleseBuf[i] = autoReload * ucWavData[(uiWavPlayIndex++) % SD_READ_BATCH]/ uiMusicCofficient;
+            uiPuleseBuf[i] = autoReload * ucWavData[(uiWavPlayIndex++) % SD_READ_BATCH] / uiMusicCofficient;
     }
 }
 

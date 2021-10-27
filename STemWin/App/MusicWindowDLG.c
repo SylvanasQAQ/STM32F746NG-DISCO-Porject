@@ -21,6 +21,7 @@
 // USER START (Optionally insert additional includes)
 #include <string.h>
 #include "os_threads.h"
+#include "gui_resources.h"
 // USER END
 
 #include "DIALOG.h"
@@ -31,21 +32,24 @@
 *
 **********************************************************************
 */
-#define ID_WINDOW_0         (GUI_ID_USER + 0x00)
-#define ID_LISTVIEW_0         (GUI_ID_USER + 0x01)
-#define ID_BUTTON_0         (GUI_ID_USER + 0x02)
-#define ID_BUTTON_1         (GUI_ID_USER + 0x03)
-#define ID_BUTTON_2         (GUI_ID_USER + 0x04)
-#define ID_BUTTON_3         (GUI_ID_USER + 0x05)
-#define ID_BUTTON_4         (GUI_ID_USER + 0x06)
-#define ID_SLIDER_0         (GUI_ID_USER + 0x07)
-#define ID_TEXT_0         (GUI_ID_USER + 0x08)
-#define ID_TEXT_1         (GUI_ID_USER + 0x09)
-#define ID_TEXT_2         (GUI_ID_USER + 0x0A)
-#define ID_TEXT_3         (GUI_ID_USER + 0x0B)
-#define ID_TEXT_4         (GUI_ID_USER + 0x0C)
-#define ID_TEXT_5         (GUI_ID_USER + 0x0D)
-#define ID_TEXT_6         (GUI_ID_USER + 0x0E)
+#define ID_WINDOW_0 (GUI_ID_USER + 0x00)
+#define ID_LISTVIEW_0 (GUI_ID_USER + 0x01)
+#define ID_BUTTON_0 (GUI_ID_USER + 0x02)
+#define ID_BUTTON_1 (GUI_ID_USER + 0x03)
+#define ID_BUTTON_2 (GUI_ID_USER + 0x04)
+#define ID_BUTTON_3 (GUI_ID_USER + 0x05)
+#define ID_BUTTON_4 (GUI_ID_USER + 0x06)
+#define ID_SLIDER_0 (GUI_ID_USER + 0x07)
+#define ID_TEXT_0 (GUI_ID_USER + 0x08)
+#define ID_TEXT_1 (GUI_ID_USER + 0x09)
+#define ID_TEXT_2 (GUI_ID_USER + 0x0A)
+#define ID_TEXT_3 (GUI_ID_USER + 0x0B)
+#define ID_TEXT_4 (GUI_ID_USER + 0x0C)
+#define ID_TEXT_5 (GUI_ID_USER + 0x0D)
+#define ID_TEXT_6 (GUI_ID_USER + 0x0E)
+#define ID_SLIDER_1 (GUI_ID_USER + 0x0F)
+#define ID_TEXT_7 (GUI_ID_USER + 0x10)
+#define ID_BUTTON_5 (GUI_ID_USER + 0x11)
 
 
 // USER START (Optionally insert additional defines)
@@ -77,10 +81,14 @@ extern U16             Music_Thread_Exist;          // 音乐后台线程运行�
 extern uint32_t        uiMusicCurrentMinute;       // 音乐播放进度——分钟
 extern uint32_t        uiMusicCurrentSecond;       // 音乐播放进度——秒
 extern uint32_t        uiMusicCurrentProgress;     // 音乐播放进度——百分比
+extern uint32_t        uiMusicVolumeN;             // 音量系数——分子
+extern uint32_t        uiMusicVolumeD;             // 音量系数——分母
 extern uint16_t        usWavCacheInvalid;          // wav 文件缓存失效标志
 extern uint32_t        uiWavPlayIndex, uiWavSampleRate, uiWavSampleDepth, uiWavDataLength;
 
 extern uint16_t        Music_FFT_Ready;             // FFT 数据准备完成标志
+
+extern char            AlarmSongPath[128];          // 闹钟歌曲路径
 
 U16                    Music_Item_Current = 0;
 char                   musicPath[100];
@@ -94,11 +102,11 @@ uint16_t               sliderClicked = 0;
 static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { WINDOW_CreateIndirect, "MusicWindow", ID_WINDOW_0, 0, 0, 480, 242, 0, 0x0, 0 },
   { LISTVIEW_CreateIndirect, "Listview", ID_LISTVIEW_0, 255, 0, 220, 160, 0, 0x0, 0 },
-  { BUTTON_CreateIndirect, "FileButton", ID_BUTTON_0, 320, 195, 70, 40, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "FileButton", ID_BUTTON_0, 315, 195, 50, 40, 0, 0x0, 0 },
   { BUTTON_CreateIndirect, "PlayButton", ID_BUTTON_1, 10, 196, 40, 40, 0, 0x0, 0 },
   { BUTTON_CreateIndirect, "PauseButton", ID_BUTTON_2, 60, 196, 60, 40, 0, 0x0, 0 },
   { BUTTON_CreateIndirect, "NextButton", ID_BUTTON_3, 130, 195, 40, 40, 0, 0x0, 0 },
-  { BUTTON_CreateIndirect, "DelButton", ID_BUTTON_4, 400, 195, 70, 40, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "DelButton", ID_BUTTON_4, 375, 195, 50, 40, 0, 0x0, 0 },
   { SLIDER_CreateIndirect, "Slider", ID_SLIDER_0, 12, 168, 400, 20, 0, 0x0, 0 },
   { TEXT_CreateIndirect, "ProgText", ID_TEXT_0, 420, 166, 47, 20, 0, 0x64, 0 },
   { TEXT_CreateIndirect, "SongText", ID_TEXT_1, 73, 140, 181, 20, 0, 0x64, 0 },
@@ -107,6 +115,9 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { TEXT_CreateIndirect, "Text1", ID_TEXT_4, 80, 132, 20, 15, 0, 0x64, 0 },
   { TEXT_CreateIndirect, "Text2", ID_TEXT_5, 150, 132, 20, 15, 0, 0x64, 0 },
   { TEXT_CreateIndirect, "Text3", ID_TEXT_6, 220, 132, 20, 15, 0, 0x64, 0 },
+  { SLIDER_CreateIndirect, "VolumeSlider", ID_SLIDER_1, 198, 192, 100, 20, 0, 0x0, 0 },
+  { TEXT_CreateIndirect, "VolumeText", ID_TEXT_7, 196, 212, 105, 20, 0, 0x64, 0 },
+  { BUTTON_CreateIndirect, "AlarmButton", ID_BUTTON_5, 435, 195, 40, 40, 0, 0x0, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -152,7 +163,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     // Initialization of 'FileButton'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_0);
-    BUTTON_SetText(hItem, "Add Files");
+    BUTTON_SetText(hItem, "Add");
     BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
     //
     // Initialization of 'PlayButton'
@@ -177,7 +188,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_4);
     BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
-    BUTTON_SetText(hItem, "Del Files");
+    BUTTON_SetText(hItem, "Del");
     //
     // Initialization of 'ProgText'
     //
@@ -231,6 +242,19 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     TEXT_SetText(hItem, "6k");
     TEXT_SetFont(hItem, GUI_FONT_13B_ASCII);
     TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x00235023));
+    //
+    // Initialization of 'VolumeText'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_7);
+    TEXT_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
+    TEXT_SetFont(hItem, GUI_FONT_16B_ASCII);
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x00FF8000));
+    TEXT_SetText(hItem, "10   Volume  100");
+    //
+    // Initialization of 'AlarmButton'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_5);
+    BUTTON_SetText(hItem, "");
     // USER START (Optionally insert additional code for further widget initialization)
     hListView = WM_GetDialogItem(pMsg->hWin, ID_LISTVIEW_0);
     LISTVIEW_SetGridVis(hListView, 0);
@@ -245,12 +269,19 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     LISTVIEW_DeleteAllRows(hListView);
     LISTVIEW_SetFont(hListView, GUI_FONT_13B_ASCII);
     LISTVIEW_SetDefaultFont(GUI_FONT_13B_ASCII);
+
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_5);
+    BUTTON_SetBitmap(hItem, 0, &bmAlarmSmall);
     //WIDGET_SetEffect(hItem, &WIDGET_Effect_None);
 
     hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0);
     SLIDER_SetRange(hItem, 0, 100);
     SLIDER_SetNumTicks(hItem, 100);
     
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_1);
+    SLIDER_SetRange(hItem, 10, 100);
+    SLIDER_SetNumTicks(hItem, 9);
+    SLIDER_SetValue(hItem, 50);
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -374,6 +405,47 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       // USER END
       }
       break;
+    case ID_SLIDER_1: // Notifications sent by 'VolumeSlider'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      case WM_NOTIFICATION_VALUE_CHANGED:
+        // USER START (Optionally insert code for reacting on notification message)
+        uiMusicVolumeN = SLIDER_GetValue(WM_GetDialogItem(pMsg->hWin, ID_SLIDER_1));
+        if(uiMusicVolumeN > 50)
+          uiMusicVolumeN = (uiMusicVolumeN - 50) * 4 + 50;
+        uiMusicVolumeD = 50;
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
+    case ID_BUTTON_5: // Notifications sent by 'AlarmButton'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        if(LISTVIEW_GetNumRows(hListView) != 0)
+        {
+          LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);
+          strcpy(AlarmSongPath, musicPath);
+        }
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
     // USER START (Optionally insert additional code for further Ids)
     // USER END
     }
@@ -430,14 +502,14 @@ static void PlayButtonEventHandler(WM_MESSAGE * pMsg)
     if (Music_Item_Current == 0xffff)     // 未选中任何 row
       Music_Item_Current = 0;             // 默认播放第一个文件
 
+    LISTVIEW_SetSel(hListView, Music_Item_Current);
+
     LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);     // 获取文件全路径
 
     Music_Play_Start = 1;         // 置位播放标志
     if (!Music_Thread_Exist)      // 如果音乐线程未启动，则新建一个线程
     {
-      Music_Thread_Exist = 1;     // 置位音乐线程存在标志
       vMusicTaskCreate();         // 启动音乐线程
-      vStorageTaskCreate();       // 启动存储线程（用于后台读取文件
       WM_CreateTimer(pMsg->hWin, 0, 100, 0);
     }
   }
@@ -496,7 +568,7 @@ static void TimerCallbackHandler(WM_MESSAGE * pMsg)
   if(Music_FFT_Ready)
     WM_InvalidateRect(pMsg->hWin, &DrawingRect);
 
-  if(msCount >= 200)
+  if(msCount >= 300)
   {
     msCount = 0;
     secondCount++;

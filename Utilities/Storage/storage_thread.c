@@ -14,7 +14,6 @@
 #define SD_BLOCKSIZE                    512
 #define SD_SCAN_FILES_ENABLE            0           // 是否开机扫描 sd 卡文件
 
-#define SD_READ_BATCH                   (2*1024*512)       // 一次读写 SD 卡 1MB 的内容
 
 
 
@@ -36,6 +35,8 @@ uint8_t*        Storage_Read_pBuffer;       // 缓冲区地址
 uint32_t        Storage_Read_uiSize;        // 要读的块大小
 uint32_t        Storage_Read_uiNum;         // 实际读到的字节数
 uint16_t        Storage_Read_Request;       // 读请求
+
+uint16_t        Storage_Thread_Exist = 0;       // Storage 线程是否正在运行
 
 
 
@@ -81,17 +82,16 @@ void vStorageTaskCreate()
 
 static void StorageThread(void *argument)
 {
-    if(Fatfs_OK == 0)
-    {
-        InitFatFS();
-    }
+    Storage_Thread_Exist = 1;
 
     for (;;)
     {
+        InitFatFS();
         ReadFile();
 
         if (Storage_Read_Request == 0 && Music_Thread_Exist == 0)
         {
+            Storage_Thread_Exist = 0;
 #ifdef CMSIS_V1
             vTaskDelete(storageTaskHandle);
 #endif
@@ -114,29 +114,31 @@ static void StorageThread(void *argument)
  */
 static void InitFatFS()
 {
-    FRESULT fatfs_ret[4];
+    static FRESULT fatfs_ret[4];
 
-
-    MX_USB_DEVICE_Init();
-    MX_FATFS_Init();
-
-    fatfs_ret[0] = f_mount(&SDFatFS, "", 0);
-    if (fatfs_ret[0] == FR_OK)
+    if (Fatfs_OK == 0)
     {
-        fatfs_ret[1] = f_open(&SDFile, "test.txt", FA_CREATE_ALWAYS | FA_WRITE);
-        if (fatfs_ret[1] == FR_OK)
-        {
-            fatfs_ret[2] = f_printf(&SDFile, "Hello %d\n", 112);
-            fatfs_ret[3] = f_close(&SDFile);
-            printf("FAT fs OK!\n");
-            f_unlink("test.txt");
+        MX_USB_DEVICE_Init();
+        MX_FATFS_Init();
 
-            Fatfs_OK = 1;
-            if (SD_SCAN_FILES_ENABLE)
-                ScanFiles("");
+        fatfs_ret[0] = f_mount(&SDFatFS, "", 0);
+        if (fatfs_ret[0] == FR_OK)
+        {
+            fatfs_ret[1] = f_open(&SDFile, "test.txt", FA_CREATE_ALWAYS | FA_WRITE);
+            if (fatfs_ret[1] == FR_OK)
+            {
+                fatfs_ret[2] = f_printf(&SDFile, "Hello %d\n", 112);
+                fatfs_ret[3] = f_close(&SDFile);
+                printf("FAT fs OK!\n");
+                f_unlink("test.txt");
+
+                Fatfs_OK = 1;
+                if (SD_SCAN_FILES_ENABLE)
+                    ScanFiles("");
+            }
+            else
+                printf("Error while opening a file!\n");
         }
-        else
-            printf("Error while opening a file!\n");
     }
 }
 
@@ -149,10 +151,14 @@ static void InitFatFS()
  */
 static void ReadFile()
 {
+    static FRESULT ret;
     if(Storage_Read_Request)
     {
-        f_read(Storage_Read_pFile, Storage_Read_pBuffer, Storage_Read_uiSize, &Storage_Read_uiNum);
-        Storage_Read_Request = 0;
+        ret = f_read(Storage_Read_pFile, Storage_Read_pBuffer, Storage_Read_uiSize, &Storage_Read_uiNum);
+        if(ret != FR_OK)                // 读失败，表示文件系统损坏，需要重新初始化
+            Fatfs_OK = 0;
+        else
+            Storage_Read_Request = 0;   // 读成功，清零请求标志
     }
 }
 

@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "app_alarm.h"
+#include "os_threads.h"
 // USER END
 
 #include "DIALOG.h"
@@ -68,6 +69,7 @@
 extern void ListWheelMoveToEffect(GUI_HWIN hItem, uint8_t pos);
 extern U8 ListWheelSelectededEffect(GUI_HWIN hItem);
 extern void ListWheelClickedEffect(GUI_HWIN hItem);
+extern uint8_t  Alarm_Thread_Exist;
 
 
 void MoveToAlarmWindow(WM_HWIN hWin);
@@ -244,7 +246,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     // Initialization of 'Text'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_2);
-    TEXT_SetText(hItem, "0");
+    TEXT_SetText(hItem, "10");
     TEXT_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
     TEXT_SetFont(hItem, GUI_FONT_13B_1);
     //
@@ -304,7 +306,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       LISTWHEEL_AddString(hItem, *(_apMinute + i));
 
     hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0);
-    SLIDER_SetRange(hItem, 0, 100);
+    SLIDER_SetRange(hItem, 10, 100);
+    SLIDER_SetNumTicks(hItem, 9);
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -574,6 +577,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         ListWheelMoveToEffect(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0), pAlarm->hour);
         ListWheelMoveToEffect(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1), pAlarm->minute);
 
+        if(pAlarm->alarmVolume < 10 || pAlarm->alarmVolume > 100)
+          pAlarm->alarmVolume = 10;
         SLIDER_SetValue(WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0), pAlarm->alarmVolume);
         // USER END
         break;
@@ -664,6 +669,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
         alarm_setEnabled(pAlarm);
+        if(Alarm_Thread_Exist == 0)
+          vAlarmTaskCreate();     // 启动闹钟线程
         WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, Id));
         WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1));
         // USER END
