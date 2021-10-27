@@ -17,9 +17,9 @@
 #define TIM_CLOCK           108000000       // APB1 的频率，即 TIM 的时钟频率
 #define DMA_BATCH           1024            // DMA 一次传送的数据量
 #define WAV_HEADER_PRINT    0               // 打印 wav 文件头信息
-#define SD_READ_BATCH       (2*1024*512)    // 一次读写 SD 卡 1 MB 的内容
+#define SD_READ_BATCH       (2*1024*256)    // 一次读写 SD 卡 0.5 MB 的内容
 
-#define FFT_DATA_POINTS     256             // 32 点大约可以cover 7K 的范围
+#define FFT_DATA_POINTS     256             // 32 点大约可以cover 6K 的范围
 
 
 
@@ -44,6 +44,7 @@ extern U16      Music_Item_Current;             // 当前播放音乐 index
 char            currentMusicPath[100];              // 当前正在播放音乐的文件路径
 extern char     musicPath[100];                     // 音乐文件路径
 extern WM_HWIN  hListView;
+extern uint16_t Storage_Read_Request;
 
 
 FIL             wavFile;
@@ -161,6 +162,9 @@ static void PlayMusic()
 
         if (strcmp(musicPath, currentMusicPath) != 0) // 新歌曲播放
         {
+            while(Storage_Read_Request)
+                osDelay(1);
+            f_close(&wavFile);
             strcpy(currentMusicPath, musicPath);
             PlayWavMusic(currentMusicPath);
         }
@@ -169,8 +173,10 @@ static void PlayMusic()
             __HAL_TIM_SET_PRESCALER(&htim5, 0);
             __HAL_TIM_SET_AUTORELOAD(&htim5, (TIM_CLOCK / uiWavSampleRate));
             usWavCacheInvalid = 1;              // 设置缓存失效标志
-            if (uiWavPlayIndex < uiWavDataLength)
+            if (uiWavPlayIndex < uiWavDataLength){
+                HAL_TIM_PWM_Stop_DMA(&htim5, TIM_CHANNEL_4);
                 HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);
+            }
             else
                 PlayWavMusic(currentMusicPath);
         }
@@ -228,6 +234,7 @@ static void PlayWavMusic(char * fileName)
     for (uint32_t i = 0; i < DMA_BATCH; i++)
         uiPuleseBuf[i] = autoReload * ucWavData[uiWavPlayIndex++  % SD_READ_BATCH] / uiMusicCofficient;
 
+    HAL_TIM_PWM_Stop_DMA(&htim5, TIM_CHANNEL_4);
     HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);       // 启动 PWM
 }
 
@@ -354,6 +361,8 @@ static void Storage_Thread_Read(FIL *fp, uint64_t offset, void *buff, uint32_t s
     extern uint32_t Storage_Read_uiNum;
     extern uint16_t Storage_Read_Request;
     
+    while(Storage_Read_Request)         //等待上一次读完成
+        osDelay(1);
     Storage_Read_pFile = fp;
     f_lseek(fp, ulWavPcmStart + offset);
     Storage_Read_pBuffer = buff;

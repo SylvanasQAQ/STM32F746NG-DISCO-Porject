@@ -279,6 +279,8 @@ static void AddFilesToMusicPlayerList(WM_HWIN hWin)
   TREEVIEW_ITEM_GetText(hTreeItemCur = TREEVIEW_GetSel(hTree), trackBuf, 100);
   while (1)
   {
+    if(strcmp(trackBuf, "SDCard[0:]"))
+      break;
     hTreeItemCur = TREEVIEW_GetItem(hTree, hTreeItemCur, TREEVIEW_GET_PARENT);
     TREEVIEW_ITEM_GetText(hTreeItemCur, pathBuf, 100);
     if (strcmp(pathBuf, "SDCard[0:]") == 0)
