@@ -115,16 +115,26 @@ static void AudioThread(void *argument)
     extern ADC_HandleTypeDef hadc3;
     extern TIM_HandleTypeDef htim2;
     extern TIM_HandleTypeDef htim5;
-    extern GUI_HWIN hCurrentWindow;
-    extern GUI_HWIN hAudioWindow;
+    extern GUI_HWIN          hCurrentWindow;
+    extern GUI_HWIN          hAudioWindow;
+    extern U16               Music_Play_On;               // 音乐播放中标志
 
+    // 开启 ADC3 的准备
     __HAL_TIM_SetAutoreload(&htim2, TIM2_AUTORELOAD);
     __HAL_TIM_SetCounter(&htim2, 0);            // Fs = 8K Hz
     HAL_ADC_Start_IT(&hadc3);
     HAL_ADC_Start_DMA(&hadc3, (uint32_t *)audio_record_buffer, 1024);
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
     
+    // 对 TIM5 CH4 的处理
+    if(Music_Play_On)
+    {
+        Music_Play_On = 0;                          // 关闭在播放的音乐
+        HAL_TIM_PWM_Stop_DMA(&htim5, TIM_CHANNEL_4);
+    }
     __HAL_TIM_SET_PRESCALER(&htim5, 108-1);
+    __HAL_TIM_SET_COMPARE(&htim5, TIM_CHANNEL_4, 0);
+    HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_4);
 
 
     for(;;)
@@ -318,7 +328,7 @@ static void AudioSingalReplay()
                 __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, 0);
             else if(i > 0 && audio_main_freq[i] != audio_main_freq[i-1])
             {
-                autoReload = 2 * TIM_CLOCK / TIM5_PRESCALER / audio_main_freq[i];
+                autoReload = TIM_CLOCK / TIM5_PRESCALER / audio_main_freq[i];
                 __HAL_TIM_SetAutoreload(&htim5, autoReload);
                 __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, 10);
                 __HAL_TIM_SetCounter(&htim5, 0);

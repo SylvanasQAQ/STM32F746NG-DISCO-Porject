@@ -14,7 +14,7 @@
 #define SD_BLOCKSIZE                    512
 #define SD_SCAN_FILES_ENABLE            0           // 是否开机扫描 sd 卡文件
 
-#define SD_READ_BATCH                   (2*1024*1024)       // 一次读写 SD 卡 2MB 的内容
+#define SD_READ_BATCH                   (2*1024*512)       // 一次读写 SD 卡 1MB 的内容
 
 
 
@@ -27,15 +27,15 @@ static void ReadFile();
 
 
 /* Private variables -----------------------------------------------------------*/
-
+extern U16      Music_Thread_Exist;          // 音乐线程启动标志
 
 uint16_t        Fatfs_OK = 0;
-FIL*            Storage_Read_pFile;
-uint8_t*        Storage_Read_pBuffer;
-uint32_t        Storage_Read_uiSize;
-uint32_t        Storage_Read_uiNum;
 
-uint16_t        Storage_Read_Request;
+FIL*            Storage_Read_pFile;         // 文件指针
+uint8_t*        Storage_Read_pBuffer;       // 缓冲区地址
+uint32_t        Storage_Read_uiSize;        // 要读的块大小
+uint32_t        Storage_Read_uiNum;         // 实际读到的字节数
+uint16_t        Storage_Read_Request;       // 读请求
 
 
 
@@ -63,7 +63,11 @@ const osThreadAttr_t storageTask_attributes = {
 void vStorageTaskCreate()
 {
 #ifdef CMSIS_V1
-    xTaskCreate(StorageThread, "Storage Task", 512, NULL, (UBaseType_t)osPriorityLow, &storageTaskHandle);
+    #if SD_SCAN_FILES_ENABLE
+        xTaskCreate(StorageThread, "Storage Task", 512, NULL, (UBaseType_t)osPriorityLow, &storageTaskHandle);
+    #else
+        xTaskCreate(StorageThread, "Storage Task", 512, NULL, (UBaseType_t)osPriorityLow, &storageTaskHandle);
+    #endif
 #endif
 
 #ifdef CMSIS_V2
@@ -86,15 +90,15 @@ static void StorageThread(void *argument)
     {
         ReadFile();
 
-//         if (Storage_Read_Request == 0)
-//         {
-// #ifdef CMSIS_V1
-//             vTaskDelete(storageTaskHandle);
-// #endif
-// #ifdef CMSIS_V2
-//             osThreadTerminate(storageTaskHandle);
-// #endif
-//         }
+        if (Storage_Read_Request == 0 && Music_Thread_Exist == 0)
+        {
+#ifdef CMSIS_V1
+            vTaskDelete(storageTaskHandle);
+#endif
+#ifdef CMSIS_V2
+            osThreadTerminate(storageTaskHandle);
+#endif
+        }
 
         osDelay(10);
     }
@@ -161,13 +165,13 @@ static void ReadFile()
  */
 static FRESULT ScanFiles(char *path)
 {
-    char path_other[70] = {0}; //目录 长度
+    char path_other[70] = {0}; //目录
 
-    FRESULT res;
-    FILINFO fno;
-    DIR dir;
-    uint16_t i = 0;
-    char *fn;
+    FRESULT     res;
+    FILINFO     fno;
+    DIR         dir;
+    uint16_t    i = 0;
+    char        *fn;
 
     res = f_opendir(&dir, path);
     if (res == FR_OK)

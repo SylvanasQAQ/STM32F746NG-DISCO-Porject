@@ -32,11 +32,11 @@
 *
 **********************************************************************
 */
-#define ID_FRAMEWIN_0 (GUI_ID_USER + 0x00)
-#define ID_TREEVIEW_0 (GUI_ID_USER + 0x01)
-#define ID_BUTTON_0 (GUI_ID_USER + 0x02)
-#define ID_BUTTON_1 (GUI_ID_USER + 0x03)
-#define ID_BUTTON_2 (GUI_ID_USER + 0x04)
+#define ID_FRAMEWIN_0         (GUI_ID_USER + 0x00)
+#define ID_TREEVIEW_0         (GUI_ID_USER + 0x01)
+#define ID_BUTTON_0         (GUI_ID_USER + 0x02)
+#define ID_BUTTON_1         (GUI_ID_USER + 0x03)
+#define ID_BUTTON_2         (GUI_ID_USER + 0x04)
 
 
 // USER START (Optionally insert additional defines)
@@ -65,9 +65,9 @@ extern WM_HWIN hListView;
 static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { FRAMEWIN_CreateIndirect, "FileFramewin", ID_FRAMEWIN_0, 0, 0, 320, 198, 0, 0x64, 0 },
   { TREEVIEW_CreateIndirect, "Treeview", ID_TREEVIEW_0, 0, 0, 309, 150, 0, 0x0, 0 },
-  { BUTTON_CreateIndirect, "OKBtn", ID_BUTTON_0, 15, 150, 30, 25, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "OKBtn", ID_BUTTON_0, 15, 150, 45, 25, 0, 0x0, 0 },
   { BUTTON_CreateIndirect, "QuitBtn", ID_BUTTON_1, 253, 150, 40, 25, 0, 0x0, 0 },
-  { BUTTON_CreateIndirect, "NOBtn", ID_BUTTON_2, 56, 150, 30, 25, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "NOBtn", ID_BUTTON_2, 86, 150, 45, 25, 0, 0x0, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -267,9 +267,9 @@ static void AddFilesToMusicPlayerList(WM_HWIN hWin)
 {
   WM_HWIN               hTree;
   TREEVIEW_ITEM_Handle  hTreeItemCur;
-  uint8_t               trackBuf[100];
-  uint8_t               tmpBuf[100];
-  uint8_t               pathBuf[100];
+  char                  trackBuf[100];
+  char                  tmpBuf[100];
+  char                  pathBuf[100];
   uint16_t              numRows;
   uint16_t              len, i;
   FIL                   fp;
@@ -350,15 +350,8 @@ static FRESULT ScanFiles(char *path, WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode)
   FRESULT res;
   FILINFO fno;
   DIR dir;
-  char *fn;                   /* This function is assuming non-Unicode cfg. */
   char path_other[50] = {0}; //目录 长度
   TREEVIEW_ITEM_Handle hItem;
-
-// #if _USE_LFN
-//   static char lfn[_MAX_LFN + 1] = {0}; /* Buffer to store the LFN */
-//   fno.lfname = lfn;
-//   fno.lfsize = sizeof(lfn);
-// #endif
 
   res = f_opendir(&dir, (const TCHAR*) path); /* Open the directory */
   if (res == FR_OK)
@@ -374,25 +367,19 @@ static FRESULT ScanFiles(char *path, WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode)
       if (fno.fname[0] == '.' || !strcmp(path_other, "System") || !strcmp(path_other, "SPOTLI"))
         continue;
 
-// #if _USE_LFN
-//       fn = *fno.lfname ? fno.lfname : fno.fname;
-// #else
-      fn = (char *) fno.fname;
-// #endif
-
-      if ((fno.fattrib & AM_DIR) && fn[0] != '.') /* It is a directory */
+      if ((fno.fattrib & AM_DIR) && fno.fname[0] != '.') /* It is a directory */
       {
         if (hTree != NULL && hNode != NULL)
         {
           //目录，创建结点
-          hItem = TREEVIEW_ITEM_Create(TREEVIEW_ITEM_TYPE_NODE, fn, 0);
+          hItem = TREEVIEW_ITEM_Create(TREEVIEW_ITEM_TYPE_NODE, fno.fname, 0);
           //把结点加入到目录树中
           TREEVIEW_AttachItem(hTree, hItem, hNode, TREEVIEW_INSERT_FIRST_CHILD);
         }
 
         //在路径最后添加文件夹路径名
         memset(path_other, 0, sizeof(path_other));
-        sprintf(path_other, "%s/%s", path, fn);
+        sprintf(path_other, "%s/%s", path, fno.fname);
 
         //遍历此新文件夹下的文件
         res = ScanFiles(path_other, hTree, hItem);
@@ -403,7 +390,7 @@ static FRESULT ScanFiles(char *path, WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode)
       {
         if (hTree != NULL && hNode != NULL) //创建目录树
         {
-          hItem = TREEVIEW_ITEM_Create(TREEVIEW_ITEM_TYPE_LEAF, fn, 0);          //文件，创建树叶 fn
+          hItem = TREEVIEW_ITEM_Create(TREEVIEW_ITEM_TYPE_LEAF, fno.fname, 0);          //文件，创建树叶 fn
           TREEVIEW_AttachItem(hTree, hItem, hNode, TREEVIEW_INSERT_FIRST_CHILD); //把树叶添加到目录树
         }
       }

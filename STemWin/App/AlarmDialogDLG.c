@@ -30,15 +30,12 @@
 *
 **********************************************************************
 */
-#define ID_FRAMEWIN_0 (GUI_ID_USER + 0x00)
-#define ID_TEXT_0 (GUI_ID_USER + 0x01)
-#define ID_BUTTON_0 (GUI_ID_USER + 0x02)
+#define ID_FRAMEWIN_0         (GUI_ID_USER + 0x00)
+#define ID_TEXT_0         (GUI_ID_USER + 0x01)
+#define ID_BUTTON_0         (GUI_ID_USER + 0x02)
 
 
 // USER START (Optionally insert additional defines)
-// 一些 dialog_type 可能的取值
-#define DIALOG_ALARM      0
-#define DIALOG_AUDIO      1
 // USER END
 
 /*********************************************************************
@@ -64,7 +61,7 @@ extern WM_HWIN hAlarmWindow;
 */
 static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { FRAMEWIN_CreateIndirect, "AlarmDialog", ID_FRAMEWIN_0, 140, 55, 200, 150, 0, 0x64, 0 },
-  { TEXT_CreateIndirect, "Text", ID_TEXT_0, 0, 0, 186, 62, 0, 0x64, 0 },
+  { TEXT_CreateIndirect, "Text", ID_TEXT_0, 2, 0, 184, 75, 0, 0x64, 0 },
   { BUTTON_CreateIndirect, "Button", ID_BUTTON_0, 52, 82, 80, 30, 0, 0x0, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
@@ -164,18 +161,35 @@ WM_HWIN CreateAlarmDialog(void) {
   WM_HWIN hWin;
 
   hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
-  WM_MakeModal(hWin);
-  WM_SetStayOnTop(hWin, 1);
   return hWin;
 }
 
 // USER START (Optionally insert additional public code)
-WM_HWIN CreateAlarmDialog_Self(char * title, char * text, uint16_t type) {
+WM_HWIN hAlarmParentWin;
+// 一些 dialog_type 可能的取值
+#define DIALOG_ALARM         0
+#define DIALOG_NOTHING         1
+#define DIALOG_PARENT_TOP    0xff       // parent 窗口已经置顶
+
+/**
+ * @brief  显示一个提醒对话框
+ * @param  char * title：对话框标题
+ * @param  char * text：对话框说明文字
+ * @param  uint16_t type：对话框类型
+ * @param  WM_HWIN hParent：对话框的调用窗口句柄（不需要可设置为 0）
+ * @retval None
+ */
+WM_HWIN CreateAlarmDialog_Self(char * title, char * text, uint16_t type, WM_HWIN hParent) {
   WM_HWIN hWin;
 
-  hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
+  if(type == DIALOG_PARENT_TOP)         // 如果调用窗口设置了 stay_on_top 属性，需要先取消这个属性
+  {
+    hAlarmParentWin = hParent;
+    WM_SetStayOnTop(hParent, 0);
+  }
 
-  FRAMEWIN_SetText(WM_GetDialogItem(hWin, ID_FRAMEWIN_0), title);
+  hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
+  FRAMEWIN_SetText(hWin, title);
   TEXT_SetText(WM_GetDialogItem(hWin, ID_TEXT_0), text);
 
   WM_MakeModal(hWin);
@@ -192,7 +206,16 @@ static void ButtonEventProcess(WM_MESSAGE * pMsg)
     GUI_EndDialog(pMsg->hWin, 0);
     MoveToAlarmWindow(hAlarmWindow);
     break;
+
+  case DIALOG_NOTHING:
+    GUI_EndDialog(pMsg->hWin, 0);
+    break;
   
+  case DIALOG_PARENT_TOP:
+    WM_MakeModal(hAlarmParentWin);
+    WM_SetStayOnTop(hAlarmParentWin, 1);
+    GUI_EndDialog(pMsg->hWin, 0);
+    break;
   default:
     GUI_EndDialog(pMsg->hWin, 0);
     break;

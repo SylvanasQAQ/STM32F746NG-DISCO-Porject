@@ -31,16 +31,21 @@
 *
 **********************************************************************
 */
-#define ID_WINDOW_0 (GUI_ID_USER + 0x00)
-#define ID_LISTVIEW_0 (GUI_ID_USER + 0x01)
-#define ID_BUTTON_0 (GUI_ID_USER + 0x02)
-#define ID_BUTTON_1 (GUI_ID_USER + 0x03)
-#define ID_BUTTON_2 (GUI_ID_USER + 0x04)
-#define ID_BUTTON_3 (GUI_ID_USER + 0x05)
-#define ID_BUTTON_4 (GUI_ID_USER + 0x06)
-#define ID_SLIDER_0 (GUI_ID_USER + 0x07)
-#define ID_TEXT_0 (GUI_ID_USER + 0x08)
-#define ID_TEXT_1 (GUI_ID_USER + 0x09)
+#define ID_WINDOW_0         (GUI_ID_USER + 0x00)
+#define ID_LISTVIEW_0         (GUI_ID_USER + 0x01)
+#define ID_BUTTON_0         (GUI_ID_USER + 0x02)
+#define ID_BUTTON_1         (GUI_ID_USER + 0x03)
+#define ID_BUTTON_2         (GUI_ID_USER + 0x04)
+#define ID_BUTTON_3         (GUI_ID_USER + 0x05)
+#define ID_BUTTON_4         (GUI_ID_USER + 0x06)
+#define ID_SLIDER_0         (GUI_ID_USER + 0x07)
+#define ID_TEXT_0         (GUI_ID_USER + 0x08)
+#define ID_TEXT_1         (GUI_ID_USER + 0x09)
+#define ID_TEXT_2         (GUI_ID_USER + 0x0A)
+#define ID_TEXT_3         (GUI_ID_USER + 0x0B)
+#define ID_TEXT_4         (GUI_ID_USER + 0x0C)
+#define ID_TEXT_5         (GUI_ID_USER + 0x0D)
+#define ID_TEXT_6         (GUI_ID_USER + 0x0E)
 
 
 // USER START (Optionally insert additional defines)
@@ -55,10 +60,13 @@
 
 // USER START (Optionally insert additional static data)
 extern WM_HWIN CreateFileDialog(void);
+extern WM_HWIN CreateAlarmDialog_Self(char * title, char * text, uint16_t type, WM_HWIN hParent);
 static void PlayButtonEventHandler(WM_MESSAGE * pMsg);
 static void NextButtonEventHandler();
 static void TimerCallbackHandler(WM_MESSAGE * pMsg);
 static void SliderCallbackHandler(WM_MESSAGE * pMsg);
+static void PaintEventHandler();
+static void DrawSpectrum(uint16_t x, uint16_t y);
 
 WM_HWIN hListView;
 
@@ -69,11 +77,14 @@ extern U16             Music_Thread_Exist;          // 音乐后台线程运行�
 extern uint32_t        uiMusicCurrentMinute;       // 音乐播放进度——分钟
 extern uint32_t        uiMusicCurrentSecond;       // 音乐播放进度——秒
 extern uint32_t        uiMusicCurrentProgress;     // 音乐播放进度——百分比
-extern uint16_t        usWavCacheInvalid; 
+extern uint16_t        usWavCacheInvalid;          // wav 文件缓存失效标志
 extern uint32_t        uiWavPlayIndex, uiWavSampleRate, uiWavSampleDepth, uiWavDataLength;
 
+extern uint16_t        Music_FFT_Ready;             // FFT 数据准备完成标志
+
 U16                    Music_Item_Current = 0;
-char musicPath[100];
+char                   musicPath[100];
+uint16_t               sliderClicked = 0;
 // USER END
 
 /*********************************************************************
@@ -90,7 +101,12 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { BUTTON_CreateIndirect, "DelButton", ID_BUTTON_4, 400, 195, 70, 40, 0, 0x0, 0 },
   { SLIDER_CreateIndirect, "Slider", ID_SLIDER_0, 12, 168, 400, 20, 0, 0x0, 0 },
   { TEXT_CreateIndirect, "ProgText", ID_TEXT_0, 420, 166, 47, 20, 0, 0x64, 0 },
-  { TEXT_CreateIndirect, "SongText", ID_TEXT_1, 16, 139, 239, 20, 0, 0x64, 0 },
+  { TEXT_CreateIndirect, "SongText", ID_TEXT_1, 73, 140, 181, 20, 0, 0x64, 0 },
+  { TEXT_CreateIndirect, "bSongText", ID_TEXT_2, 15, 140, 56, 20, 0, 0x64, 0 },
+  { TEXT_CreateIndirect, "Text0", ID_TEXT_3, 10, 132, 20, 15, 0, 0x64, 0 },
+  { TEXT_CreateIndirect, "Text1", ID_TEXT_4, 80, 132, 20, 15, 0, 0x64, 0 },
+  { TEXT_CreateIndirect, "Text2", ID_TEXT_5, 150, 132, 20, 15, 0, 0x64, 0 },
+  { TEXT_CreateIndirect, "Text3", ID_TEXT_6, 220, 132, 20, 15, 0, 0x64, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -174,22 +190,61 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     // Initialization of 'SongText'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_1);
-    TEXT_SetText(hItem, "Playing: null");
+    TEXT_SetText(hItem, "null");
     TEXT_SetTextAlign(hItem, GUI_TA_LEFT | GUI_TA_VCENTER);
     TEXT_SetFont(hItem, GUI_FONT_16B_ASCII);
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x00FF00FF));
+    //
+    // Initialization of 'bSongText'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_2);
+    TEXT_SetText(hItem, "Playing: ");
+    TEXT_SetTextAlign(hItem, GUI_TA_LEFT | GUI_TA_VCENTER);
     TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x00FF0000));
+    TEXT_SetFont(hItem, GUI_FONT_16B_ASCII);
+    //
+    // Initialization of 'Text0'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_3);
+    TEXT_SetText(hItem, "0");
+    TEXT_SetFont(hItem, GUI_FONT_13B_ASCII);
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x0070C76B));
+    //
+    // Initialization of 'Text1'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_4);
+    TEXT_SetText(hItem, "2k");
+    TEXT_SetFont(hItem, GUI_FONT_13B_ASCII);
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x00378E37));
+    //
+    // Initialization of 'Text2'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_5);
+    TEXT_SetText(hItem, "4k");
+    TEXT_SetTextAlign(hItem, GUI_TA_LEFT | GUI_TA_VCENTER);
+    TEXT_SetFont(hItem, GUI_FONT_13B_ASCII);
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x00316B2E));
+    //
+    // Initialization of 'Text3'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_6);
+    TEXT_SetText(hItem, "6k");
+    TEXT_SetFont(hItem, GUI_FONT_13B_ASCII);
+    TEXT_SetTextColor(hItem, GUI_MAKE_COLOR(0x00235023));
     // USER START (Optionally insert additional code for further widget initialization)
-    hListView = hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTVIEW_0);
-    LISTVIEW_SetGridVis(hItem, 0);
-    LISTVIEW_SetAutoScrollV(hItem, 1);
-    LISTVIEW_SetBkColor(hItem, LISTVIEW_CI_UNSEL, GUI_WHITE);
-    LISTVIEW_SetTextColor(hItem, LISTVIEW_CI_UNSEL, GUI_LIGHTBLUE);
-    LISTVIEW_SetBkColor(hItem, LISTVIEW_CI_SEL, GUI_LIGHTBLUE);
-    LISTVIEW_SetTextColor(hItem, LISTVIEW_CI_SEL, GUI_WHITE);
-    LISTVIEW_SetRowHeight(hItem, 20);
-    LISTVIEW_SetBkColor(hItem, LISTVIEW_CI_SELFOCUS, GUI_LIGHTBLUE);
-    LISTVIEW_SetTextColor(hItem, LISTVIEW_CI_SELFOCUS, GUI_WHITE);
+    hListView = WM_GetDialogItem(pMsg->hWin, ID_LISTVIEW_0);
+    LISTVIEW_SetGridVis(hListView, 0);
+    LISTVIEW_SetAutoScrollV(hListView, 1);
+    LISTVIEW_SetBkColor(hListView, LISTVIEW_CI_UNSEL, GUI_WHITE);
+    LISTVIEW_SetTextColor(hListView, LISTVIEW_CI_UNSEL, GUI_LIGHTBLUE);
+    LISTVIEW_SetBkColor(hListView, LISTVIEW_CI_SEL, GUI_LIGHTBLUE);
+    LISTVIEW_SetTextColor(hListView, LISTVIEW_CI_SEL, GUI_WHITE);
+    LISTVIEW_SetRowHeight(hListView, 20);
+    LISTVIEW_SetBkColor(hListView, LISTVIEW_CI_SELFOCUS, GUI_LIGHTBLUE);
+    LISTVIEW_SetTextColor(hListView, LISTVIEW_CI_SELFOCUS, GUI_WHITE);
     LISTVIEW_DeleteAllRows(hListView);
+    LISTVIEW_SetFont(hListView, GUI_FONT_13B_ASCII);
+    LISTVIEW_SetDefaultFont(GUI_FONT_13B_ASCII);
     //WIDGET_SetEffect(hItem, &WIDGET_Effect_None);
 
     hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0);
@@ -288,7 +343,10 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
-        LISTVIEW_DeleteRow(hListView, LISTVIEW_GetSel(hListView));
+        if(LISTVIEW_GetSel(hListView) != Music_Item_Current)    // 默认无法删除当前播放音乐
+          LISTVIEW_DeleteRow(hListView, LISTVIEW_GetSel(hListView));
+        else
+          CreateAlarmDialog_Self("Invalid Operation", "Can't delete a song\n while it's playing", 1, 0);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -299,10 +357,12 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
+        sliderClicked = 1;
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        sliderClicked = 0;
         SliderCallbackHandler(pMsg);
         // USER END
         break;
@@ -321,6 +381,10 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   // USER START (Optionally insert additional message handling)
   case WM_TIMER:
     TimerCallbackHandler(pMsg);
+    break;
+  case WM_PAINT:
+    PaintEventHandler();
+    break;
   // USER END
   default:
     WM_DefaultProc(pMsg);
@@ -366,13 +430,14 @@ static void PlayButtonEventHandler(WM_MESSAGE * pMsg)
     if (Music_Item_Current == 0xffff)     // 未选中任何 row
       Music_Item_Current = 0;             // 默认播放第一个文件
 
-    LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);     // 获取文件名
+    LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);     // 获取文件全路径
 
     Music_Play_Start = 1;         // 置位播放标志
     if (!Music_Thread_Exist)      // 如果音乐线程未启动，则新建一个线程
     {
-      Music_Thread_Exist = 1;
-      vMusicTaskCreate();
+      Music_Thread_Exist = 1;     // 置位音乐线程存在标志
+      vMusicTaskCreate();         // 启动音乐线程
+      vStorageTaskCreate();       // 启动存储线程（用于后台读取文件
       WM_CreateTimer(pMsg->hWin, 0, 100, 0);
     }
   }
@@ -420,50 +485,155 @@ static void SliderCallbackHandler(WM_MESSAGE * pMsg)
  */
 static void TimerCallbackHandler(WM_MESSAGE * pMsg)
 {
-  WM_HWIN       hItem;
-  char          progBuffer[16];
-  char          musicName[32], tmpBuffer[32];
-  short         i, j, count = 0;
+  static WM_HWIN       hItem;
+  static char          charBuffer[32];
+  static short         i, j;
+  static uint16_t      secondCount = 0;
+  static uint16_t      msCount = 0;
+  static const  GUI_RECT DrawingRect = {0, 0, 252, 130};
 
-  if(Music_Thread_Exist){
+  msCount += 10;
+  if(Music_FFT_Ready)
+    WM_InvalidateRect(pMsg->hWin, &DrawingRect);
+
+  if(msCount >= 200)
+  {
+    msCount = 0;
+    secondCount++;
+
     uiMusicCurrentSecond = uiWavPlayIndex / uiWavSampleRate / (uiWavSampleDepth / 8) % 60;
     uiMusicCurrentMinute = uiWavPlayIndex / uiWavSampleRate / (uiWavSampleDepth / 8) / 60;
     uiMusicCurrentProgress = uiWavPlayIndex * 100 / uiWavDataLength;
 
-    sprintf(progBuffer, "%02d:%02d", uiMusicCurrentMinute, uiMusicCurrentSecond);
+    sprintf(charBuffer, "%02d:%02d", uiMusicCurrentMinute, uiMusicCurrentSecond);
     hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
-    TEXT_SetText(hItem, progBuffer);
+    TEXT_SetText(hItem, charBuffer);
 
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0);
-    SLIDER_SetValue(hItem, uiMusicCurrentProgress);
-
-    count++;
-    if(count > 5){
-      count = 0;
+    if(sliderClicked == 0)
+      SLIDER_SetValue(WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0), uiMusicCurrentProgress);
+    
+    if(secondCount % 5 == 0)
       LISTVIEW_SetSel(hListView, Music_Item_Current);
-    }
 
-    LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicName, 32);
-    for (i = strlen(musicName) - 1; i > -1; i--)
-      if (musicName[i] == '/')
+    LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, charBuffer, 32);
+    for (i = strlen(charBuffer) - 1; i > -1; i--)
+      if (charBuffer[i] == '/')
         break;
-    for (j = 0, i++; musicName[i] != '.';)
-      musicName[j++] = musicName[i++];
-    musicName[j] = '\0';
-    sprintf(tmpBuffer, "Playing: %s", musicName);
+    for (j = 0, i++; charBuffer[i] != '.';)
+      charBuffer[j++] = charBuffer[i++];
+    charBuffer[j] = '\0';
     hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_1);
-    TEXT_SetText(hItem, tmpBuffer);
+    TEXT_SetText(hItem, charBuffer);
+  }
 
+  if(Music_Thread_Exist){
 #ifdef CMSIS_V1
-    WM_RestartTimer(pMsg->Data.v, 1000);
+    WM_RestartTimer(pMsg->Data.v, 10);
 #endif
 
 #ifdef CMSIS_V2
-    WM_RestartTimer(pMsg->Data.v, 200000000);
+    WM_RestartTimer(pMsg->Data.v, 1000000);
 #endif
   }
   else
     WM_DeleteTimer(pMsg->Data.v);
+}
+
+
+
+/**
+ * @brief  处理 WM_PAINT 事件
+ * @param  None
+ * @retval None
+ */
+static void PaintEventHandler()
+{
+  if (Music_FFT_Ready)
+  {
+    GUI_Clear();
+    GUI_SetColor(GUI_WHITE);
+    GUI_DrawRoundedFrame(8, 2, 248, 136, 3, 2);    
+    DrawSpectrum(12, 6 + 128 - 128);
+
+    Music_FFT_Ready = 0;
+  }
+}
+
+
+
+/**
+ * @brief  频谱显示
+ * @param  uint16_t x   频谱x坐标
+ * @param  uint16_t y   频谱y坐标
+ * @retval None
+ */
+static void DrawSpectrum(uint16_t x, uint16_t y)
+{
+  static uint16_t       topValueArr[32] = {0}; /* 频谱顶值表 */
+  static uint16_t       curValueArr[32] = {0}; /* 频谱当前值表 */
+  static uint8_t        timeArr[32] = {0};      /* 顶值停留时间表 */
+  static const uint16_t maxVal = 128;     /* 高度固定为128个像素 */
+  static uint16_t       i, temp, deltaX = 7;
+
+  extern float32_t       fMusic_FFT_Data[];
+  extern float32_t       fMusic_FFT_Mag[];
+
+
+  /* 显示32条频谱 */
+  for (i = 0; i < 32; i++)
+  {
+    temp = (uint16_t)(fMusic_FFT_Mag[i] / 1024);
+
+    /* 2. 更新频谱数值 */
+    if (curValueArr[i] < temp)
+      curValueArr[i] = temp;
+    else
+    {
+      if (curValueArr[i] > 1)
+        curValueArr[i] -= 2;
+      else
+        curValueArr[i] = 0;
+    }
+
+    /* 3. 更新频谱顶值 */
+    if (timeArr[i])
+      timeArr[i]--;
+    else if (topValueArr[i])
+      topValueArr[i]--;
+
+    /* 4. 重设频谱顶值 */
+    if (curValueArr[i] > topValueArr[i])
+    {
+      topValueArr[i] = curValueArr[i];
+      timeArr[i] = 10; /* 重设峰值停顿时间 */
+    }
+
+    /* 5. 防止超出频谱值和顶值范围，高度固定为128个像素 */
+    if (curValueArr[i] > maxVal)
+      curValueArr[i] = maxVal;
+
+    if (topValueArr[i] > maxVal)
+      topValueArr[i] = maxVal;
+  }
+
+  /* 6. 绘制得到的频谱 */
+  for (i = 0; i < 32; i++)
+  {
+    /* 显示频谱 */
+    GUI_DrawGradientV(x,
+                      y + maxVal - curValueArr[i],
+                      x + deltaX,
+                      y + maxVal,
+                      GUI_YELLOW,
+                      GUI_GREEN);
+
+    /* 显示顶值 */
+    GUI_SetColor(GUI_RED);
+    GUI_DrawHLine(y + maxVal - topValueArr[i] - 1, x, x + deltaX);
+    GUI_SetColor(GUI_RED);
+    GUI_DrawHLine(y + maxVal - topValueArr[i] - 1, x, x + deltaX);
+    x += deltaX;
+  }
 }
 // USER END
 

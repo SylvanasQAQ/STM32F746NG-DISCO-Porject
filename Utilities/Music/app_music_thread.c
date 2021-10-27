@@ -9,13 +9,17 @@
 #include "main.h"
 #include "app_wavDecoder.h"
 #include "fatfs.h"
+#include "arm_math.h"
+#include "arm_common_tables.h"
 
 
 /* Defines ------------------------------------------------------------------*/
 #define TIM_CLOCK           108000000       // APB1 的频率，即 TIM 的时钟频率
-#define DMA_BATCH           4096            // DMA 一次传送的数据量
+#define DMA_BATCH           1024            // DMA 一次传送的数据量
 #define WAV_HEADER_PRINT    0               // 打印 wav 文件头信息
 #define SD_READ_BATCH       (2*1024*512)    // 一次读写 SD 卡 1 MB 的内容
+
+#define FFT_DATA_POINTS     256             // 32 点大约可以cover 7K 的范围
 
 
 
@@ -63,7 +67,9 @@ uint32_t        uiMusicCurrentMinute = 0;       // 音乐播放进度——分�
 uint32_t        uiMusicCurrentSecond = 0;       // 音乐播放进度——秒
 uint32_t        uiMusicCurrentProgress = 0;     // 音乐播放进度——百分比
 
-
+float32_t       fMusic_FFT_Data[FFT_DATA_POINTS * 2];
+float32_t       fMusic_FFT_Mag[FFT_DATA_POINTS / 2];
+uint16_t        Music_FFT_Ready = 0;
 
 
 
@@ -121,6 +127,10 @@ static void MusicThread(void *argument)
         PlayMusic();
         WavCacheUpdate();
 
+
+
+
+        // 如果没有在音乐播放界面且后台没有播放音乐，终止线程以回收资源
         if(hCurrentWindow != hMusicWindow && Music_Play_On == 0)
         {
             Music_Thread_Exist = 0;
@@ -156,6 +166,9 @@ static void PlayMusic()
         }
         else // 暂停的歌曲继续播放
         {
+            __HAL_TIM_SET_PRESCALER(&htim5, 0);
+            __HAL_TIM_SET_AUTORELOAD(&htim5, (TIM_CLOCK / uiWavSampleRate));
+            usWavCacheInvalid = 1;              // 设置缓存失效标志
             if (uiWavPlayIndex < uiWavDataLength)
                 HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);
             else
@@ -204,6 +217,7 @@ static void PlayWavMusic(char * fileName)
 
     autoReload = TIM_CLOCK / wavHeader.fmt_sample_rate;         // 计算 TIM5 的 autoreload
     // 设置好 TIM5 的寄存器
+    HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_4);
     __HAL_TIM_SET_PRESCALER(&htim5, 0);
     __HAL_TIM_SetAutoreload(&htim5, autoReload);
     __HAL_TIM_SetCounter(&htim5, 0);
@@ -228,7 +242,6 @@ static void WavCacheUpdate()
 {
     static uint64_t     offset;
     static uint64_t     size;
-    extern uint16_t     Storage_Read_Request;
 
     if (Music_Play_On)
     {
@@ -279,6 +292,8 @@ static void WavCacheUpdate()
  */
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
+    static uint32_t i;
+
     if(htim->Instance == TIM5)
     {
         if (uiWavPlayIndex < uiWavDataLength && Music_Play_On)
@@ -296,7 +311,7 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
         }
 
         uiMusicCofficient = ((1 << uiWavSampleDepth) - 1) * uiMusicVolumeN / uiMusicVolumeD;
-        for (uint32_t i = DMA_BATCH / 2; i < DMA_BATCH; i++)
+        for (i = DMA_BATCH / 2; i < DMA_BATCH; i++)
             uiPuleseBuf[i] = autoReload * ucWavData[(uiWavPlayIndex++) % SD_READ_BATCH]/ uiMusicCofficient;
     }
 }
@@ -309,10 +324,23 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
  */
 void HAL_TIM_PWM_PulseFinishedHalfCpltCallback(TIM_HandleTypeDef *htim)
 {
+    static uint32_t i;
+
     if(htim->Instance == TIM5)
     {
-        for (uint32_t i = 0; i < DMA_BATCH / 2; i++)
+        for ( i = 0; i < DMA_BATCH / 2; i++)
             uiPuleseBuf[i] = autoReload * ucWavData[uiWavPlayIndex++  % SD_READ_BATCH ] / uiMusicCofficient;
+
+        // 准备 FFT 数据
+        for ( i = 0; i < FFT_DATA_POINTS; i++)
+        {
+            fMusic_FFT_Data[2*i] = uiPuleseBuf[i];
+            fMusic_FFT_Data[2*i + 1] = 0;
+        }
+        arm_cfft_f32(&arm_cfft_sR_f32_len256, fMusic_FFT_Data, 0, 1);
+        arm_cmplx_mag_f32(fMusic_FFT_Data, fMusic_FFT_Mag, 128);
+        fMusic_FFT_Mag[0] /= 2;
+        Music_FFT_Ready = 1;
     }
 }
 

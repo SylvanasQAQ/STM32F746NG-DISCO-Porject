@@ -48,7 +48,7 @@ void vAlarmTaskCreate(void *argument)
 static void AlarmThread(void *argument)
 {
     extern TIM_HandleTypeDef htim3;
-    extern WM_HWIN CreateAlarmDialog(void);
+    extern WM_HWIN CreateAlarmDialog_Self(char * title, char * text, uint16_t type, WM_HWIN hParent);
     alarm_t *p = NULL;
     uint32_t day = 0;
     uint8_t lightEffect = 0;
@@ -110,7 +110,7 @@ static void AlarmThread(void *argument)
                 HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
                 __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2, 3000);
             }
-            CreateAlarmDialog();
+            CreateAlarmDialog_Self("Alarm", "Alarm is on", 0, 0);
         }
 
         // 延时一秒

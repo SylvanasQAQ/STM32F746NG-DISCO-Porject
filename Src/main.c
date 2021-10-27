@@ -164,8 +164,6 @@ int main(void)
   MX_TIM12_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim12);
-  HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_4);
-  __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, 0);
   BSP_SDRAM_Init();
 	//uctsk_lua_init();
   
@@ -619,7 +617,7 @@ static void MX_TIM5_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 50;
+  sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
