@@ -1427,6 +1427,9 @@
         <group>
             <name>FatFs</name>
             <file>
+                <name>$PROJ_DIR$\..\Middlewares\Third_Party\FatFs\src\option\ccsbcs.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Middlewares\Third_Party\FatFs\src\diskio.c</name>
             </file>
             <file>

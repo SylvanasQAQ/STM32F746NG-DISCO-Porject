@@ -1310,7 +1310,7 @@
         <name>$PROJ_DIR$\..\Middlewares\Third_Party\FatFs\src\option\syscall.c</name>
       </file>
       <file>
-        <name>$PROJ_DIR$/../Middlewares/Third_Party/FatFs/src/option/ccsbcs.c</name>
+        <name>$PROJ_DIR$\..\Middlewares\Third_Party\FatFs\src\option\ccsbcs.c</name>
       </file>
     </group>
     <group>
