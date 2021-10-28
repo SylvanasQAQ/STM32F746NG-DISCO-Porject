@@ -55,6 +55,7 @@
 
 // USER START (Optionally insert additional static data)
 static void rainbowEffect(WM_HWIN hItem);
+static void TimerCallbackHandler(WM_MESSAGE *pMsg);
 
 extern GUI_HWIN hClockWindow;
 extern GUI_HWIN hCurrentWindow;
@@ -72,6 +73,8 @@ extern void MoveToAlarmWindow(WM_HWIN hWin);
 extern void MoveToAudioWindow(WM_HWIN hWin);
 extern void MoveToFreqAnalysisWindow(WM_HWIN hWin);
 extern void MoveToMusicWindow(WM_HWIN hWin);
+
+static uint16_t Special_Effect = 0;
 // USER END
 
 /*********************************************************************
@@ -139,7 +142,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     BUTTON_SetBitmap(hItem, 0, &bmFreq);
     hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_4);
     BUTTON_SetBitmap(hItem, 0, &bmMusic);
-
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_7);
+    BUTTON_SetBitmap(hItem, 0, &bmAlert);
     #ifdef CMSIS_V1
     WM_CreateTimer(pMsg->hWin, 0, 100, 0);
     #endif
@@ -270,6 +274,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        Special_Effect = !Special_Effect;
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -282,14 +287,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     break;
   // USER START (Optionally insert additional message handling)
   case WM_TIMER:
-    rainbowEffect(WM_GetDialogItem(pMsg->hWin, ID_TEXT_0));
-    #ifdef CMSIS_V1
-    WM_RestartTimer(pMsg->Data.v, 1000);
-    #endif
-
-    #ifdef CMSIS_V2
-    WM_RestartTimer(pMsg->Data.v, 200000000);
-    #endif
+    TimerCallbackHandler(pMsg);
     break;
   // USER END
   default:
@@ -323,6 +321,49 @@ WM_HWIN CreateDesktop(void) {
   return hWin;
 }
 
+
+
+static void TimerCallbackHandler(WM_MESSAGE *pMsg)
+{
+  static uint16_t count = 100, i;
+  static int      xi[8] = {40, 150, 260, 370, 40, 150, 260, 370}, 
+                  yi[8] = {10, 10, 10, 10, 130, 130, 130, 130}, 
+                  mxi[8] = {5, -4, 7, -5, -4, -7, 5, 4}, 
+                  myi[8] = {6, -5, -5, -6, 3, -3, 7, -6};
+  static int buttonIDs[] = {ID_BUTTON_0, ID_BUTTON_1, ID_BUTTON_2, ID_BUTTON_3, ID_BUTTON_4, ID_BUTTON_5, ID_BUTTON_6, ID_BUTTON_7};
+
+  count += 50;
+  if(count > 1000)
+  {
+    rainbowEffect(WM_GetDialogItem(pMsg->hWin, ID_TEXT_0));
+    count = 0;
+  }
+
+
+  if(Special_Effect && hCurrentWindow == hHomeWindow)
+  {
+    for(i = 0; i < 8; i++)
+    {
+      xi[i] = WM_GetWindowOrgX(WM_GetDialogItem(pMsg->hWin, buttonIDs[i])); 
+      yi[i] = WM_GetWindowOrgY(WM_GetDialogItem(pMsg->hWin, buttonIDs[i]));
+
+      if(xi[i] > 410 || xi[i] < 0)
+        mxi[i] = -mxi[i];
+      if(yi[i] > 202 || yi[i] < 30)
+        myi[i] = -myi[i];
+
+      WM_MoveWindow(WM_GetDialogItem(pMsg->hWin, buttonIDs[i]), mxi[i], myi[i]);
+    }
+  }
+
+
+#ifdef CMSIS_V1
+  WM_RestartTimer(pMsg->Data.v, 50);
+#endif
+#ifdef CMSIS_V2
+  WM_RestartTimer(pMsg->Data.v, 20000000);
+#endif
+}
 
 
 /**

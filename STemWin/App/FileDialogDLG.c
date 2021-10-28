@@ -340,18 +340,13 @@ static void AddFilesToMusicPlayerList(WM_HWIN hWin)
       return;
     }
 
-    if(wavHeader.fmt_channels != 1)
-    {
-      CreateAlarmDialog_Self("Wav File Error", "Only support single channel", DIALOG_NOTHING);
-      return;
-    }
 
     // 在 listview 中添加新的一行
     LISTVIEW_AddRow(hListView, NULL);
     numRows = LISTVIEW_GetNumRows(hListView);
     LISTVIEW_SetItemText(hListView, 0, numRows - 1, trackBuf);
 
-    len = wavHeader.data_datasize / wavHeader.fmt_sample_rate / (wavHeader.fmt_bit_per_sample / 8);
+    len = wavHeader.data_datasize / wavHeader.fmt_sample_rate / (wavHeader.fmt_bit_per_sample / 8) / wavHeader.fmt_channels;
     sprintf(tmpBuf, "%02d:%02d",  len / 60, len % 60);
     LISTVIEW_SetItemText(hListView, 1, numRows - 1, tmpBuf);
   }

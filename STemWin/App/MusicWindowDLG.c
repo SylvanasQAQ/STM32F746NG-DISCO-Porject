@@ -84,7 +84,7 @@ extern uint32_t        uiMusicCurrentProgress;     // 音乐播放进度——�
 extern uint32_t        uiMusicVolumeN;             // 音量系数——分子
 extern uint32_t        uiMusicVolumeD;             // 音量系数——分母
 extern uint16_t        usWavCacheInvalid;          // wav 文件缓存失效标志
-extern uint32_t        uiWavPlayIndex, uiWavSampleRate, uiWavSampleDepth, uiWavDataLength;
+extern uint32_t        uiWavPlayIndex, uiWavSampleRate, uiWavSampleDepth, uiWavChannelNum, uiWavDataLength;
 
 extern uint16_t        Music_FFT_Ready;             // FFT 数据准备完成标志
 
@@ -461,6 +461,12 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   case WM_TIMER:
     TimerCallbackHandler(pMsg);
     break;
+  case WM_PRE_PAINT:
+    GUI_MULTIBUF_Begin();
+    break;
+  case WM_POST_PAINT:
+    GUI_MULTIBUF_End();
+    break;
   case WM_PAINT:
     PaintEventHandler();
     break;
@@ -492,7 +498,10 @@ WM_HWIN CreateMusicWindow(void) {
 // USER START (Optionally insert additional public code)
 void MoveToMusicWindow(WM_HWIN hWin)
 {
-  
+  uiMusicVolumeN = SLIDER_GetValue(WM_GetDialogItem(hWin, ID_SLIDER_1));
+  if (uiMusicVolumeN > 50)
+    uiMusicVolumeN = (uiMusicVolumeN - 50) * 4 + 50;
+  uiMusicVolumeD = 50;
 }
 
 
@@ -573,7 +582,7 @@ static void TimerCallbackHandler(WM_MESSAGE * pMsg)
   static uint16_t      msCount = 0;
   static const  GUI_RECT DrawingRect = {0, 0, 252, 130};
 
-  msCount += 10;
+  msCount += 20;
   if(Music_FFT_Ready)
     WM_InvalidateRect(pMsg->hWin, &DrawingRect);
 
@@ -582,8 +591,8 @@ static void TimerCallbackHandler(WM_MESSAGE * pMsg)
     msCount = 0;
     secondCount++;
 
-    uiMusicCurrentSecond = uiWavPlayIndex / uiWavSampleRate / (uiWavSampleDepth / 8) % 60;
-    uiMusicCurrentMinute = uiWavPlayIndex / uiWavSampleRate / (uiWavSampleDepth / 8) / 60;
+    uiMusicCurrentSecond = uiWavPlayIndex / uiWavChannelNum / uiWavSampleRate / (uiWavSampleDepth / 8) % 60;
+    uiMusicCurrentMinute = uiWavPlayIndex / uiWavChannelNum / uiWavSampleRate / (uiWavSampleDepth / 8) / 60;
     uiMusicCurrentProgress = uiWavPlayIndex * 100 / uiWavDataLength;
 
     sprintf(charBuffer, "%02d:%02d", uiMusicCurrentMinute, uiMusicCurrentSecond);
@@ -609,7 +618,7 @@ static void TimerCallbackHandler(WM_MESSAGE * pMsg)
 
   if(Music_Thread_Exist){
 #ifdef CMSIS_V1
-    WM_RestartTimer(pMsg->Data.v, 10);
+    WM_RestartTimer(pMsg->Data.v, 20);
 #endif
 
 #ifdef CMSIS_V2
@@ -634,12 +643,12 @@ static void PaintEventHandler()
 {
   if (Music_FFT_Ready)
   {
+    Music_FFT_Ready = 0;
+    
     GUI_Clear();
     GUI_SetColor(GUI_WHITE);
     GUI_DrawRoundedFrame(8, 2, 248, 136, 3, 2);    
     DrawSpectrum(12, 6 + 128 - 128);
-
-    Music_FFT_Ready = 0;
   }
 }
 

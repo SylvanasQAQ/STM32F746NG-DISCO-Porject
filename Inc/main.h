@@ -70,7 +70,7 @@ extern "C" {
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 #define LCD_FRAME_BUFFER          SDRAM_DEVICE_ADDR
-#define SDRAM_WRITE_READ_ADDR        ((uint32_t)(LCD_FRAME_BUFFER + 0x40000))
+#define SDRAM_WRITE_READ_ADDR        ((uint32_t)(LCD_FRAME_BUFFER + 0x60000))
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);

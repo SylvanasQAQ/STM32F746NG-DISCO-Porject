@@ -560,7 +560,7 @@ void MoveToClockWindow(WM_HWIN hWin)
   ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_3), os_time_hour);
   ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_4), os_time_minute);
 
-  if (atoi(_apYear[0]) + 30 < os_date_year || os_date_year + 30 < atoi(_apYear[0]))
+  if (atoi(_apYear[0]) + 20 < os_date_year || os_date_year < atoi(_apYear[0]))
   {
     year = os_date_year;
     sprintf(_apYear[18 - 1], "%d", year);

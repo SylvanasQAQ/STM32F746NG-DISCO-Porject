@@ -59,6 +59,7 @@ uint64_t        ulWavPcmStart;                  // wav 文件 PCM 数据的起�
 uint32_t        uiWavDataLength;                // wav 文件的 PCM 数据长度
 uint32_t        uiWavSampleDepth;               // wav 文件的采样位数
 uint32_t        uiWavSampleRate;                // wav 文件的采样频率
+uint32_t        uiWavChannelNum;                // wav 文件的声道数
 uint16_t        usWavCacheHalfUsed;             // wav 文件的缓存一半已用标志
 uint16_t        usWavCacheInvalid;              // wav 文件的缓存失效标志
 
@@ -216,6 +217,7 @@ static void PlayWavMusic(char * fileName)
         uiWavDataLength = wavHeader.data_datasize;
         uiWavSampleDepth = wavHeader.fmt_bit_per_sample;
         uiWavSampleRate = wavHeader.fmt_sample_rate;
+        uiWavChannelNum = wavHeader.fmt_channels;
         ulWavPcmStart = wavFile.fptr;
 
 
@@ -237,7 +239,7 @@ static void PlayWavMusic(char * fileName)
     // 为第一次 DMA 启动准备数据
     uiMusicCofficient = ((1 << uiWavSampleDepth) - 1) * uiMusicVolumeD / uiMusicVolumeN;
     for (uint32_t i = 0; i < DMA_BATCH; i++)
-        uiPuleseBuf[i] = autoReload * ucWavData[uiWavPlayIndex++  % SD_READ_BATCH] / uiMusicCofficient;
+        uiPuleseBuf[i] = autoReload * ucWavData[(uiWavPlayIndex+=uiWavChannelNum)  % SD_READ_BATCH] / uiMusicCofficient;
 
     HAL_TIM_PWM_Stop_DMA(&htim5, TIM_CHANNEL_4);
     HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);       // 启动 PWM
@@ -322,7 +324,7 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 
         uiMusicCofficient = ((1 << uiWavSampleDepth) - 1) * uiMusicVolumeD / uiMusicVolumeN;
         for (i = DMA_BATCH / 2; i < DMA_BATCH; i++)
-            uiPuleseBuf[i] = autoReload * ucWavData[(uiWavPlayIndex++) % SD_READ_BATCH] / uiMusicCofficient;
+            uiPuleseBuf[i] = autoReload * ucWavData[(uiWavPlayIndex+=uiWavChannelNum) % SD_READ_BATCH] / uiMusicCofficient;
     }
 }
 
@@ -339,7 +341,7 @@ void HAL_TIM_PWM_PulseFinishedHalfCpltCallback(TIM_HandleTypeDef *htim)
     if(htim->Instance == TIM5)
     {
         for ( i = 0; i < DMA_BATCH / 2; i++)
-            uiPuleseBuf[i] = autoReload * ucWavData[uiWavPlayIndex++  % SD_READ_BATCH ] / uiMusicCofficient;
+            uiPuleseBuf[i] = autoReload * ucWavData[(uiWavPlayIndex+=uiWavChannelNum)  % SD_READ_BATCH ] / uiMusicCofficient;
 
         // 准备 FFT 数据
         for ( i = 0; i < FFT_DATA_POINTS; i++)

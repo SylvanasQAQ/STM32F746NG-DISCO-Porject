@@ -235,7 +235,7 @@ int8_t STORAGE_IsWriteProtected_FS(uint8_t lun)
 int8_t STORAGE_Read_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t blk_len)
 {
   /* USER CODE BEGIN 6 */
-  return  HAL_SD_ReadBlocks(&hsd1, buf, blk_addr, blk_len, 30000) == HAL_OK ?
+  return  HAL_SD_ReadBlocks(&hsd1, buf, blk_addr, blk_len, 10000) == HAL_OK ?
                 (USBD_OK) : (USBD_FAIL);
   /* USER CODE END 6 */
 }
@@ -248,7 +248,7 @@ int8_t STORAGE_Read_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t bl
 int8_t STORAGE_Write_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t blk_len)
 {
   /* USER CODE BEGIN 7 */
-  return  HAL_SD_WriteBlocks(&hsd1, buf, blk_addr, blk_len, 30000) == HAL_OK ?
+  return  HAL_SD_WriteBlocks(&hsd1, buf, blk_addr, blk_len, 10000) == HAL_OK ?
                 (USBD_OK) : (USBD_FAIL);
   /* USER CODE END 7 */
 }
