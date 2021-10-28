@@ -127,6 +127,14 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     hItem = WM_GetDialogItem(pMsg->hWin, ID_IMAGE_1);
     IMAGE_SetBitmap(hItem, &bmMusic_disable);
 
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
+    TEXT_SetTextColor(hItem, GUI_BLUE);
+    TEXT_SetFont(hItem, &GUI_Font16B_ASCII);
+
+    PROGBAR_SetDefaultSkin(PROGBAR_SKIN_FLEX);
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_PROGBAR_0);
+    PROGBAR_SetBarColor(hItem, 0, GUI_RED);
+
     #ifdef CMSIS_V1
     WM_CreateTimer(pMsg->hWin, 0, 100, 0);
     #endif
@@ -134,10 +142,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     #ifdef CMSIS_V2
     WM_CreateTimer(pMsg->hWin, 0, 200000, 0);
     #endif
-
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_TEXT_0);
-    TEXT_SetTextColor(hItem, GUI_BLUE);
-    TEXT_SetFont(hItem, &GUI_Font16B_ASCII);
     // USER END
     break;
   case WM_NOTIFY_PARENT:

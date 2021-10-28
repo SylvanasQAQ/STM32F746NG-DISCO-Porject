@@ -24,6 +24,7 @@
 #include<stdio.h>
 #include "os_threads.h"
 #include "app_alarm.h"
+#include <string.h>
 // USER END
 
 #include "DIALOG.h"
@@ -61,18 +62,30 @@ void MoveToClockWindow(WM_HWIN hWin);
 void ListWheelClickedEffect(GUI_HWIN hItem);
 U8 ListWheelSelectededEffect(GUI_HWIN hItem);
 void ListWheelMoveToEffect(GUI_HWIN hItem, uint8_t pos);
+static void TimerCallbackHandler(WM_MESSAGE * pMsg);
 
-
-
+WM_HWIN   hListWheelYear;
+uint16_t  ListWheelYearReleased = 0;
 static int ListWheelArr[] = {ID_LISTWHEEL_0, ID_LISTWHEEL_1, ID_LISTWHEEL_2, ID_LISTWHEEL_3, ID_LISTWHEEL_4};
 
-static char *_apYear[] = {
-  "1990","1991", "1992", "1993", "1994", "1995", "1996",
-  "1997", "1998", "1999", "2000", "2001", "2002", "2003",
+static char  __apYear[35][5] = {
   "2004", "2005", "2006", "2007", "2008", "2009", "2010",
   "2011", "2012", "2013", "2014", "2015", "2016", "2017",
-  "2018", "2019", "2020", "2021", "2022", "2023", "2024"
+  "2018", "2019", "2020", "2021", "2022", "2023", "2024",
+  "2025", "2026", "2027", "2028", "2029", "2030", "2031",
+  "2032", "2033", "2034", "2035", "2036", "2037", "2038",
 };
+
+static char *  _apYear[] = {
+  *(__apYear), *(__apYear+1), *(__apYear+2), *(__apYear+3), *(__apYear+4), *(__apYear+5), *(__apYear+6),
+  *(__apYear+7), *(__apYear+8), *(__apYear+9), *(__apYear+10), *(__apYear+11), *(__apYear+12), *(__apYear+13),
+  *(__apYear+14), *(__apYear+15), *(__apYear+16), *(__apYear+17), *(__apYear+18), *(__apYear+19), *(__apYear+20),
+  *(__apYear+21), *(__apYear+22), *(__apYear+23), *(__apYear+24), *(__apYear+25), *(__apYear+26), *(__apYear+27),
+  *(__apYear+28), *(__apYear+29), *(__apYear+30), *(__apYear+31), *(__apYear+32), *(__apYear+33), *(__apYear+34),
+  NULL
+};
+
+
 
 static char *_apMonth[] = {
   "January",
@@ -87,6 +100,7 @@ static char *_apMonth[] = {
   "October",
   "November",
   "December",
+  NULL
 };
 
 static char *_apDay[] = {
@@ -97,7 +111,7 @@ static char *_apDay[] = {
   "17", "18", "19", "20",
   "21", "22", "23", "24",
   "25", "26", "27", "28",
-  "29", "30", "31",
+  "29", "30", "31", NULL
 };
 
 static char * _apHour[] = {
@@ -106,7 +120,7 @@ static char * _apHour[] = {
   "09", "10", "11", "12",
   "13", "14", "15", "16",
   "17", "18", "19", "20",
-  "21", "22", "23",
+  "21", "22", "23", NULL
 };
 
 static char * _apMinute[] = {
@@ -124,7 +138,7 @@ static char * _apMinute[] = {
   "45", "46", "47", "48",
   "49", "50", "51", "52",
   "53", "54", "55", "56",
-  "57", "58", "59", 
+  "57", "58", "59", NULL
 };
 // USER END
 
@@ -188,7 +202,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   // USER START (Optionally insert additional variables)
   WM_HWIN hListWheelMonth = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0);
   WM_HWIN hListWheelDay = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1);
-  WM_HWIN hListWheelYear = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_2);
+  hListWheelYear = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_2);
   char    buf[8];
   U8      index;
   U32     year;
@@ -245,21 +259,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       LISTWHEEL_SetSel(hItem, 0);
     }
 
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0);
-    for (int i = 0; i < GUI_COUNTOF(_apMonth); i++)
-      LISTWHEEL_AddString(hItem, *(_apMonth + i));
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1);
-    for (int i = 0; i < GUI_COUNTOF(_apDay); i++)
-      LISTWHEEL_AddString(hItem, *(_apDay + i));
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_2);
-    for (int i = 0; i < GUI_COUNTOF(_apYear); i++)
-      LISTWHEEL_AddString(hItem, *(_apYear + i));
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_3);
-    for (int i = 0; i < GUI_COUNTOF(_apHour); i++)
-      LISTWHEEL_AddString(hItem, *(_apHour + i));
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_4);
-    for (int i = 0; i < GUI_COUNTOF(_apMinute); i++)
-      LISTWHEEL_AddString(hItem, *(_apMinute + i));
+    LISTWHEEL_SetText(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0), _apMonth);
+    LISTWHEEL_SetText(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1), _apDay);
+    LISTWHEEL_SetText(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_2), _apYear);
+    LISTWHEEL_SetText(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_3), _apHour);
+    LISTWHEEL_SetText(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_4), _apMinute);
     // USER END
     break;
   case WM_NOTIFY_PARENT:
@@ -390,10 +394,12 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        ListWheelYearReleased = 1;
         // USER END
         break;
       case WM_NOTIFICATION_SEL_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
+        ListWheelYearReleased = 0;
         month = LISTWHEEL_GetPos(hListWheelMonth) + 1;
         index = LISTWHEEL_GetPos(hListWheelYear);
         LISTWHEEL_GetItemText(hListWheelYear, index, buf, 7);
@@ -510,6 +516,8 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     }
     break;
   // USER START (Optionally insert additional message handling)
+  case WM_TIMER:
+    TimerCallbackHandler(pMsg);
   // USER END
   default:
     WM_DefaultProc(pMsg);
@@ -544,17 +552,78 @@ WM_HWIN CreateClockWindow(void) {
  */
 void MoveToClockWindow(WM_HWIN hWin)
 {
+  static uint16_t  year;
+  static int       i;
+
   ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_0), os_date_month - 1);
-
   ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_1), os_date_day - 1);
-
-  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_2), os_date_year - 1990);
-
   ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_3), os_time_hour);
-
   ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_4), os_time_minute);
+
+  if (atoi(_apYear[0]) + 30 < os_date_year || os_date_year + 30 < atoi(_apYear[0]))
+  {
+    year = os_date_year;
+    sprintf(_apYear[18 - 1], "%d", year);
+    for (i = 16; i > -1; i--)
+      sprintf(_apYear[i], "%d", --year);
+    year = atoi(_apYear[18 - 1]);
+    for (i = 18; i < 35; i++)
+      sprintf(_apYear[i], "%d", ++year);
+    LISTWHEEL_SetText(hListWheelYear, _apYear);
+  }
+  ListWheelMoveToEffect(WM_GetDialogItem(hWin, ID_LISTWHEEL_2), os_date_year - atoi(_apYear[0]));
+
+  WM_CreateTimer(hWin, 0, 50, 0);
 }
 
+
+
+/**
+ * @brief   计时器回调函数，主要为了 ListviewYear 的文字更新以实现动态更新范围
+ * @param   WM_MESSAGE * pMsg
+ * @return  void 
+ */
+static void TimerCallbackHandler(WM_MESSAGE * pMsg)
+{
+  extern GUI_HWIN hCurrentWindow;
+  extern GUI_HWIN hClockWindow;
+
+  static uint16_t pos, total = 36, year;
+  static int i;
+
+  if(ListWheelYearReleased == 1)
+  {
+    pos = LISTWHEEL_GetPos(hListWheelYear);
+    if(pos*4 / total == 0 || pos*4 / 3 > total)
+    {
+      LISTWHEEL_SetVelocity(hListWheelYear, 0);
+
+      year = atoi(_apYear[pos]);
+      sprintf(_apYear[18-1], "%d", year);
+      for(i = 16; i > -1; i--)
+        sprintf(_apYear[i], "%d", --year);
+      year = atoi(_apYear[18-1]);
+      for(i = 18; i < 35; i++)
+        sprintf(_apYear[i], "%d", ++year);
+      LISTWHEEL_SetText(hListWheelYear, _apYear);
+      ListWheelYearReleased = 0;
+      LISTWHEEL_SetPos(hListWheelYear, 18-1);
+      ListWheelSelectededEffect(hListWheelYear);
+      //ListWheelMoveToEffect(hListWheelYear, 18-1);
+    }
+  }
+
+  if(hCurrentWindow != hClockWindow)
+    WM_DeleteTimer(pMsg->Data.v);
+  else{
+#ifdef CMSIS_V1
+    WM_RestartTimer(pMsg->Data.v, 20);
+#endif
+#ifdef CMSIS_V2
+    WM_RestartTimer(pMsg->Data.v, 500000);
+#endif
+  }
+}
 
 
 /**

@@ -9,6 +9,7 @@
 #include "DIALOG.h"
 #include <math.h>
 #include "arm_math.h"
+#include "dialog_window.h"
 
 
 /* Private defines -----------------------------------------------------------*/
@@ -300,6 +301,7 @@ static void AudioSingalExtract()
         {
             Audio_Record_OnOff = 0;
             Audio_Record_Ready = 1;
+            CreateAlarmDialog_Self("Notice", "Main frequency capture\n completes!", DIALOG_NOTHING);
         }
     }
 }

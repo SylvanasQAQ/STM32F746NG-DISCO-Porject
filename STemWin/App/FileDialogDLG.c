@@ -22,6 +22,7 @@
 #include "fatfs.h"
 #include <stdio.h>
 #include "app_wavDecoder.h"
+#include "dialog_window.h"
 // USER END
 
 #include "DIALOG.h"
@@ -51,7 +52,6 @@
 */
 
 // USER START (Optionally insert additional static data)
-extern WM_HWIN CreateAlarmDialog_Self(char * title, char * text, uint16_t type, WM_HWIN hParent);
 static FRESULT ScanFiles(char* path,WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode);
 static void AddFilesToMusicPlayerList(WM_HWIN hWin);
 
@@ -194,6 +194,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        DIALOG_TOP_EXIST = 0;
         GUI_EndDialog(pMsg->hWin, 0);
         // USER END
         break;
@@ -249,7 +250,10 @@ WM_HWIN CreateFileFramewin(void) {
 WM_HWIN CreateFileDialog(void) {
   WM_HWIN hWin;
 
+  DIALOG_TOP_EXIST = 1;
   hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 80, 40);
+  hStayOnTopWindow = hWin;
+
   WM_MakeModal(hWin);
   WM_SetStayOnTop(hWin, 1);
   return hWin;
@@ -279,7 +283,7 @@ static void AddFilesToMusicPlayerList(WM_HWIN hWin)
   TREEVIEW_ITEM_GetText(hTreeItemCur = TREEVIEW_GetSel(hTree), trackBuf, 100);
   while (1)
   {
-    if(strcmp(trackBuf, "SDCard[0:]"))
+    if(strcmp(trackBuf, "SDCard[0:]") == 0)
       break;
     hTreeItemCur = TREEVIEW_GetItem(hTree, hTreeItemCur, TREEVIEW_GET_PARENT);
     TREEVIEW_ITEM_GetText(hTreeItemCur, pathBuf, 100);
@@ -304,8 +308,7 @@ static void AddFilesToMusicPlayerList(WM_HWIN hWin)
   i = strlen(trackBuf);
   if(trackBuf[i-3] != 'w' || trackBuf[i-2] != 'a' || trackBuf[i-1] != 'v')
   {
-    //WM_SetStayOnTop(hWin, 0);
-    CreateAlarmDialog_Self("File Type Error", "Please add `.wav` files", 0xff, hWin);
+    CreateAlarmDialog_Self("File Type Error", "Please add `.wav` files", DIALOG_NOTHING);
     return;
   }
 
@@ -314,27 +317,46 @@ static void AddFilesToMusicPlayerList(WM_HWIN hWin)
   {
     LISTVIEW_GetItemText(hListView, 0, i, tmpBuf, 100);
     if(strcmp(trackBuf, tmpBuf) == 0)
+    {
+      CreateAlarmDialog_Self("Error", "Song already exist!", DIALOG_NOTHING);
       return;
+    }
   }
 
-  // 在 listview 中添加新的一行
-  LISTVIEW_AddRow(hListView, NULL);
-  numRows = LISTVIEW_GetNumRows(hListView);
-  LISTVIEW_SetItemText(hListView, 0, numRows - 1, trackBuf);
 
   if(f_open(&fp, trackBuf, FA_READ) == FR_OK)
   {
-    read_wavheader(&fp, &wavHeader);
+    if(read_wavheader(&fp, &wavHeader) != 0)
+    {
+      f_close(&fp);
+      CreateAlarmDialog_Self("Wav File Error", "Not a standard wav file", DIALOG_NOTHING);
+      return;
+    }
     f_close(&fp);
+
+    if(wavHeader.fmt_bit_per_sample != 8)
+    {
+      CreateAlarmDialog_Self("Wav File Error", "Only support 8-bit music", DIALOG_NOTHING);
+      return;
+    }
+
+    if(wavHeader.fmt_channels != 1)
+    {
+      CreateAlarmDialog_Self("Wav File Error", "Only support single channel", DIALOG_NOTHING);
+      return;
+    }
+
+    // 在 listview 中添加新的一行
+    LISTVIEW_AddRow(hListView, NULL);
+    numRows = LISTVIEW_GetNumRows(hListView);
+    LISTVIEW_SetItemText(hListView, 0, numRows - 1, trackBuf);
 
     len = wavHeader.data_datasize / wavHeader.fmt_sample_rate / (wavHeader.fmt_bit_per_sample / 8);
     sprintf(tmpBuf, "%02d:%02d",  len / 60, len % 60);
     LISTVIEW_SetItemText(hListView, 1, numRows - 1, tmpBuf);
   }
   else
-  {
-    CreateAlarmDialog_Self("File System Error", "Failed to open the file", 0xff, hWin);
-  }
+    CreateAlarmDialog_Self("File System Error", "Failed to open the file", DIALOG_NOTHING);
 }
 
 
@@ -366,7 +388,7 @@ static FRESULT ScanFiles(char *path, WM_HWIN hTree, TREEVIEW_ITEM_Handle hNode)
 
       strcpy(path_other, (const char *) fno.fname);
       path_other[6] = '\0';
-      if (fno.fname[0] == '.' || !strcmp(path_other, "System") || !strcmp(path_other, "SPOTLI"))
+      if (fno.fname[0] == '.' || !strcmp(path_other, "System") || !strcmp(path_other, "SPOTLI") || !strcmp(path_other, "fseven") || !strcmp(path_other, "000000"))
         continue;
 
       if ((fno.fattrib & AM_DIR) && fno.fname[0] != '.') /* It is a directory */

@@ -118,7 +118,7 @@ static char * _apHour[] = {
   "09", "10", "11", "12",
   "13", "14", "15", "16",
   "17", "18", "19", "20",
-  "21", "22", "23",
+  "21", "22", "23", NULL
 };
 
 static char * _apMinute[] = {
@@ -136,7 +136,7 @@ static char * _apMinute[] = {
   "45", "46", "47", "48",
   "49", "50", "51", "52",
   "53", "54", "55", "56",
-  "57", "58", "59", 
+  "57", "58", "59", NULL
 };
 
 static int _OwnerDraw(const WIDGET_ITEM_DRAW_INFO * pDrawItemInfo)
@@ -298,12 +298,9 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       LISTWHEEL_SetOwnerDraw(hItem, _OwnerDraw);
       LISTWHEEL_SetSel(hItem, 0);
     }
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0);
-    for (int i = 0; i < GUI_COUNTOF(_apHour); i++)
-      LISTWHEEL_AddString(hItem, *(_apHour + i));
-    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1);
-    for (int i = 0; i < GUI_COUNTOF(_apMinute); i++)
-      LISTWHEEL_AddString(hItem, *(_apMinute + i));
+
+    LISTWHEEL_SetText(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0), _apHour);
+    LISTWHEEL_SetText(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1), _apMinute);
 
     hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0);
     SLIDER_SetRange(hItem, 10, 100);

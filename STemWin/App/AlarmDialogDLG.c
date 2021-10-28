@@ -20,6 +20,7 @@
 
 // USER START (Optionally insert additional includes)
 #include "main.h"
+#include "dialog_window.h"
 // USER END
 
 #include "DIALOG.h"
@@ -46,15 +47,22 @@
 */
 
 // USER START (Optionally insert additional static data)
-static uint16_t dialog_type = 0;
-extern U16             Music_Play_On;              // 音乐播放中标志
+static void ButtonEventProcess(WM_HWIN hWin);
+extern void MoveToAlarmWindow(WM_HWIN hWin);
 
-static void ButtonEventProcess(WM_MESSAGE * pMsg);
+
+uint16_t       DIALOG_TOP_EXIST = 0;
+WM_HWIN        hStayOnTopWindow;
+
+static DIALOG_TYPE   dialog_type = 0;
+static uint16_t      DIALOG_WINDOW_EXIST = 0;
+static WM_HWIN       hAlarmDialog;
+
 
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim5;
-extern void MoveToAlarmWindow(WM_HWIN hWin);
-extern WM_HWIN hAlarmWindow;
+extern WM_HWIN           hAlarmWindow;
+extern U16    Music_Play_On;              // 音乐播放中标志
 // USER END
 
 /*********************************************************************
@@ -125,7 +133,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
-        ButtonEventProcess(pMsg);
+        ButtonEventProcess(pMsg->hWin);
         // USER END
         break;
       case WM_NOTIFICATION_RELEASED:
@@ -167,30 +175,29 @@ WM_HWIN CreateAlarmDialog(void) {
 }
 
 // USER START (Optionally insert additional public code)
-WM_HWIN hAlarmParentWin;
 // 一些 dialog_type 可能的取值
-#define DIALOG_ALARM         0
-#define DIALOG_NOTHING         1
-#define DIALOG_PARENT_TOP    0xff       // parent 窗口已经置顶
+
 
 /**
  * @brief  显示一个提醒对话框
  * @param  char * title：对话框标题
  * @param  char * text：对话框说明文字
  * @param  uint16_t type：对话框类型
- * @param  WM_HWIN hParent：对话框的调用窗口句柄（不需要可设置为 0）
  * @retval None
  */
-WM_HWIN CreateAlarmDialog_Self(char * title, char * text, uint16_t type, WM_HWIN hParent) {
+WM_HWIN CreateAlarmDialog_Self(char * title, char * text, DIALOG_TYPE type) {
   WM_HWIN hWin;
 
-  if(type == DIALOG_PARENT_TOP)         // 如果调用窗口设置了 stay_on_top 属性，需要先取消这个属性
-  {
-    hAlarmParentWin = hParent;
-    WM_SetStayOnTop(hParent, 0);
-  }
+  if(DIALOG_WINDOW_EXIST == 1)
+    ButtonEventProcess(hAlarmDialog);
+  if(DIALOG_TOP_EXIST == 1)
+    WM_SetStayOnTop(hStayOnTopWindow, 0);
 
+  dialog_type = type;
+
+  DIALOG_WINDOW_EXIST = 1;
   hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
+  hAlarmDialog = hWin;
   FRAMEWIN_SetText(hWin, title);
   TEXT_SetText(WM_GetDialogItem(hWin, ID_TEXT_0), text);
 
@@ -199,33 +206,28 @@ WM_HWIN CreateAlarmDialog_Self(char * title, char * text, uint16_t type, WM_HWIN
   return hWin;
 }
 
-static void ButtonEventProcess(WM_MESSAGE * pMsg)
+
+
+static void ButtonEventProcess(WM_HWIN hWin)
 {
-  switch (dialog_type)
+  if(dialog_type & DIALOG_ALARM)
   {
-  case DIALOG_ALARM:
     __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2, 0);
     if(Music_Play_On)
       Music_Play_On = 0;
     else
       HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_4);
-    GUI_EndDialog(pMsg->hWin, 0);
     MoveToAlarmWindow(hAlarmWindow);
-    break;
-
-  case DIALOG_NOTHING:
-    GUI_EndDialog(pMsg->hWin, 0);
-    break;
-  
-  case DIALOG_PARENT_TOP:
-    WM_MakeModal(hAlarmParentWin);
-    WM_SetStayOnTop(hAlarmParentWin, 1);
-    GUI_EndDialog(pMsg->hWin, 0);
-    break;
-  default:
-    GUI_EndDialog(pMsg->hWin, 0);
-    break;
   }
+
+  if(DIALOG_TOP_EXIST == 1){
+    WM_SetStayOnTop(hStayOnTopWindow, 1);
+    WM_MakeModal(hStayOnTopWindow);
+  }
+
+
+  DIALOG_WINDOW_EXIST = 0;
+  GUI_EndDialog(hWin, 0);
 }
 // USER END
 

@@ -6,6 +6,7 @@
 #include <string.h>
 #include "os_threads.h"
 #include "fatfs.h"
+#include "dialog_window.h"
 
 
 
@@ -18,7 +19,6 @@
 static void AlarmThread(void *argument);
 static void CheckAlarm();
 static void AlarmAlert();
-extern WM_HWIN CreateAlarmDialog_Self(char * title, char * text, uint16_t type, WM_HWIN hParent);
 
 
 
@@ -81,7 +81,8 @@ static void AlarmThread(void *argument)
     for (;;)
     {
         CheckAlarm();
-        AlarmAlert();
+        if (AlarmTriggered)
+            AlarmAlert();
 
 
         if(alarm_enabled == 0)
@@ -174,46 +175,42 @@ static void AlarmAlert()
 {
     extern char       musicPath[100];
     extern uint16_t   Music_Play_Start;            // 音乐开始标志
-    extern uint16_t   Music_Play_Restart;            // 音乐开始标志
-    extern uint16_t   Music_Thread_Exist;          // 音乐后台线程运行标志
-    extern uint32_t   uiMusicVolumeN;             // 音量系数——分子
-    extern uint32_t   uiMusicVolumeD;             // 音量系数——分母
-    FIL               file;
+    extern uint16_t Music_Play_Restart;            // 音乐开始标志
+    extern uint16_t Music_Thread_Exist;            // 音乐后台线程运行标志
+    extern uint32_t uiMusicVolumeN;                // 音量系数——分子
+    extern uint32_t uiMusicVolumeD;                // 音量系数——分母
+    FIL file;
 
-    // 触发闹钟
-    if (AlarmTriggered)
+    AlarmTriggered = 0;
+    if (AlarmLightEffect)
     {
-        AlarmTriggered = 0;
-        if (AlarmLightEffect)
-        {
-            __HAL_TIM_SET_PRESCALER(&htim3, 10800-1);
-            __HAL_TIM_SET_AUTORELOAD(&htim3, 500-1);
-            __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2, 100);
-            HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
-        }
-
-        strcpy(musicPath, AlarmSongPath);
-        if(f_open(&file, AlarmSongPath, FA_READ) == FR_OK)
-        {
-            f_close(&file);
-            Music_Play_Start = 1;
-            Music_Play_Restart = 1;
-            // set volume
-            uiMusicVolumeD = 50;
-            uiMusicVolumeN = AlarmVolume > 50 ? (AlarmVolume - 50) * 4 + 50 : AlarmVolume;
-            if (Music_Thread_Exist == 0)
-                vMusicTaskCreate(); // 启动音乐线程
-        }
-        else
-        {
-            f_close(&file);
-            __HAL_TIM_SET_PRESCALER(&htim5, 1080*5-1);
-            __HAL_TIM_SET_AUTORELOAD(&htim5, 200-1);
-            __HAL_TIM_SetCounter(&htim5, 0);
-            __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, AlarmVolume);
-            HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_4);
-        }
-
-        CreateAlarmDialog_Self("Alarm", "Alarm is on", 0, 0);
+        __HAL_TIM_SET_PRESCALER(&htim3, 10800 - 1);
+        __HAL_TIM_SET_AUTORELOAD(&htim3, 500 - 1);
+        __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2, 100);
+        HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
     }
+
+    strcpy(musicPath, AlarmSongPath);
+    if (f_open(&file, AlarmSongPath, FA_READ) == FR_OK)
+    {
+        f_close(&file);
+        Music_Play_Start = 1;
+        Music_Play_Restart = 1;
+        // set volume
+        uiMusicVolumeD = 50;
+        uiMusicVolumeN = AlarmVolume > 50 ? (AlarmVolume - 50) * 4 + 50 : AlarmVolume;
+        if (Music_Thread_Exist == 0)
+            vMusicTaskCreate(); // 启动音乐线程
+    }
+    else
+    {
+        f_close(&file);
+        __HAL_TIM_SET_PRESCALER(&htim5, 1080 * 5 - 1);
+        __HAL_TIM_SET_AUTORELOAD(&htim5, 200 - 1);
+        __HAL_TIM_SetCounter(&htim5, 0);
+        __HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4, AlarmVolume);
+        HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_4);
+    }
+
+    CreateAlarmDialog_Self("Alarm", "Alarm is on", DIALOG_ALARM);
 }

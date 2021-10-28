@@ -22,6 +22,7 @@
 #include <string.h>
 #include "os_threads.h"
 #include "gui_resources.h"
+#include "dialog_window.h"
 // USER END
 
 #include "DIALOG.h"
@@ -64,7 +65,6 @@
 
 // USER START (Optionally insert additional static data)
 extern WM_HWIN CreateFileDialog(void);
-extern WM_HWIN CreateAlarmDialog_Self(char * title, char * text, uint16_t type, WM_HWIN hParent);
 static void PlayButtonEventHandler(WM_MESSAGE * pMsg);
 static void NextButtonEventHandler();
 static void TimerCallbackHandler(WM_MESSAGE * pMsg);
@@ -92,7 +92,8 @@ extern char            AlarmSongPath[128];          // 闹钟歌曲路径
 
 U16                    Music_Item_Current = 0;
 char                   musicPath[100];
-uint16_t               sliderClicked = 0;
+static uint16_t               sliderClicked = 0;
+static uint16_t               Timer_Exist = 0;
 // USER END
 
 /*********************************************************************
@@ -141,6 +142,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   int     NCode;
   int     Id;
   // USER START (Optionally insert additional variables)
+  static char tmpBuf[128];
   // USER END
 
   switch (pMsg->MsgId) {
@@ -257,7 +259,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     BUTTON_SetText(hItem, "");
     // USER START (Optionally insert additional code for further widget initialization)
     hListView = WM_GetDialogItem(pMsg->hWin, ID_LISTVIEW_0);
-    LISTVIEW_SetGridVis(hListView, 0);
+    LISTVIEW_SetGridVis(hListView, 1);
     LISTVIEW_SetAutoScrollV(hListView, 1);
     LISTVIEW_SetBkColor(hListView, LISTVIEW_CI_UNSEL, GUI_WHITE);
     LISTVIEW_SetTextColor(hListView, LISTVIEW_CI_UNSEL, GUI_LIGHTBLUE);
@@ -269,10 +271,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     LISTVIEW_DeleteAllRows(hListView);
     LISTVIEW_SetFont(hListView, GUI_FONT_13B_ASCII);
     LISTVIEW_SetDefaultFont(GUI_FONT_13B_ASCII);
+    WIDGET_SetEffect(hItem, &WIDGET_Effect_None);
 
     hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_5);
     BUTTON_SetBitmap(hItem, 0, &bmAlarmSmall);
-    //WIDGET_SetEffect(hItem, &WIDGET_Effect_None);
+    //
 
     hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0);
     SLIDER_SetRange(hItem, 0, 100);
@@ -377,7 +380,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         if(LISTVIEW_GetSel(hListView) != Music_Item_Current)    // 默认无法删除当前播放音乐
           LISTVIEW_DeleteRow(hListView, LISTVIEW_GetSel(hListView));
         else
-          CreateAlarmDialog_Self("Invalid Operation", "Can't delete a song\n while it's playing", 1, 0);
+          CreateAlarmDialog_Self("Invalid Operation", "Can't delete a song\n while it's playing", DIALOG_NOTHING);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -439,7 +442,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         {
           LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);
           strcpy(AlarmSongPath, musicPath);
+          sprintf(tmpBuf, "Successfully set \n `%s`\n as the alarm sound", AlarmSongPath);
+          CreateAlarmDialog_Self("Success", tmpBuf, DIALOG_NOTHING);
         }
+        else
+          CreateAlarmDialog_Self("Failed", "There's no song \nin the list", DIALOG_NOTHING);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -508,8 +515,9 @@ static void PlayButtonEventHandler(WM_MESSAGE * pMsg)
 
     Music_Play_Start = 1;         // 置位播放标志
     if (!Music_Thread_Exist)      // 如果音乐线程未启动，则新建一个线程
-    {
       vMusicTaskCreate();         // 启动音乐线程
+    if(!Timer_Exist){
+      Timer_Exist = 1;
       WM_CreateTimer(pMsg->hWin, 0, 100, 0);
     }
   }
@@ -528,6 +536,7 @@ static void NextButtonEventHandler()
     Music_Item_Current = (Music_Item_Current + 1) % LISTVIEW_GetNumRows(hListView);
     LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);
     Music_Play_Start = 1;
+    LISTVIEW_SetSel(hListView, Music_Item_Current);
   }
 }
 
@@ -608,7 +617,10 @@ static void TimerCallbackHandler(WM_MESSAGE * pMsg)
 #endif
   }
   else
+  {
     WM_DeleteTimer(pMsg->Data.v);
+    Timer_Exist = 0;
+  }
 }
 
 
@@ -654,7 +666,7 @@ static void DrawSpectrum(uint16_t x, uint16_t y)
   /* 显示32条频谱 */
   for (i = 0; i < 32; i++)
   {
-    temp = (uint16_t)(fMusic_FFT_Mag[i] / 1024);
+    temp = (uint16_t)(fMusic_FFT_Mag[i] / 512);
 
     /* 2. 更新频谱数值 */
     if (curValueArr[i] < temp)
@@ -696,13 +708,13 @@ static void DrawSpectrum(uint16_t x, uint16_t y)
                       y + maxVal - curValueArr[i],
                       x + deltaX,
                       y + maxVal,
-                      GUI_YELLOW,
-                      GUI_GREEN);
+                      GUI_CYAN,
+                      GUI_MAGENTA);
 
     /* 显示顶值 */
-    GUI_SetColor(GUI_RED);
+    GUI_SetColor(GUI_DARKGREEN);
     GUI_DrawHLine(y + maxVal - topValueArr[i] - 1, x, x + deltaX);
-    GUI_SetColor(GUI_RED);
+    GUI_SetColor(GUI_DARKGREEN);
     GUI_DrawHLine(y + maxVal - topValueArr[i] - 1, x, x + deltaX);
     x += deltaX;
   }
