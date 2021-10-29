@@ -33,6 +33,40 @@
             "cStandard": "c11",
             "cppStandard": "c++11",
             "intelliSenseMode": "windows-gcc-x86"
+        },
+        {
+            "name": "PC",
+            "includePath": [
+                "Inc",
+                "Drivers/STM32F7xx_HAL_Driver/Inc",
+                "Drivers/STM32F7xx_HAL_Driver/Inc/Legacy",
+                "Drivers/CMSIS/Device/ST/STM32F7xx/Include",
+                "Drivers/CMSIS/Include",
+                "Drivers/CMSIS/DSP/Include",
+                "${workspaceFolder}/Middlewares/ST/STemWin/inc",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/IAR/ARM_CM7/r0p1",
+                "${workspaceFolder}/Utilities/include",
+                "Drivers/BSP/STM32746G-Discovery",
+                "${workspaceFolder}/Middlewares/Third_Party/FatFs/src",
+                "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Core/Inc",
+                "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Inc",
+                "${workspaceFolder}/Utilities/Music",
+                "${workspaceFolder}/Drivers/CMSIS/RTOS/Template"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "USE_HAL_DRIVER",
+                "STM32F746xx",
+                "__VSCODE"
+            ],
+            "windowsSdkVersion": "10.0.19041.0",
+            "compilerPath": "C:/MinGW/bin/gcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "windows-gcc-x86"
         }
     ],
     "version": 4

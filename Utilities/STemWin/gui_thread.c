@@ -15,7 +15,14 @@
 /* Functions prototypes ---------------------------------------------*/
 static void GUIThread(void *argument);
 
-
+extern WM_HWIN CreateWindow(void);
+extern WM_HWIN CreateTaskBar(void);
+extern WM_HWIN CreateDesktop(void);
+extern WM_HWIN CreateClockWindow(void);
+extern WM_HWIN CreateAlarmWindow(void);
+extern WM_HWIN CreateAudioWindow(void);
+extern WM_HWIN CreateFreqAnalysisWindow(void);
+extern WM_HWIN CreateMusicWindow(void);
 
 
 
@@ -75,15 +82,6 @@ void vGUITaskCreate()
  */
 static void GUIThread(void *argument)
 {
-	extern WM_HWIN CreateWindow(void);
-	extern WM_HWIN CreateTaskBar(void);
-	extern WM_HWIN CreateDesktop(void);
-	extern WM_HWIN CreateClockWindow(void);
-	extern WM_HWIN CreateAlarmWindow(void);
-	extern WM_HWIN CreateAudioWindow(void);
-	extern WM_HWIN CreateFreqAnalysisWindow(void);
-	extern WM_HWIN CreateMusicWindow(void);
-
 	/* Initialize GUI */
 	GUI_Init();
 
@@ -111,7 +109,7 @@ static void GUIThread(void *argument)
 	/* Gui background Task */
 	while (1)
 	{
-		GUI_Exec(); /* Do the background work ... Update windows etc.) */
+		GUI_Exec(); 	/* Do the background work ... Update windows etc.) */
 		vTaskDelay(20); /* Nothing left to do for the moment ... Idle processing */
 	}
 }

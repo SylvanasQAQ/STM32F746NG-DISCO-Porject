@@ -15,12 +15,12 @@
 
 
 /* Defines ------------------------------------------------------------------*/
-#define TIM_CLOCK           108000000       // APB1 的频率，即 TIM 的时钟频率
-#define DMA_BATCH           1024            // DMA 一次传送的数据量
-#define WAV_HEADER_PRINT    0               // 打印 wav 文件头信息
-#define SD_READ_BATCH       (2*1024*32)    // 一次读写 SD 卡 64KB 的内容
+#define TIM_CLOCK           108000000            // APB1 的频率，即 TIM 的时钟频率
+#define DMA_BATCH           1024                 // DMA 一次传送的数据量
+#define WAV_HEADER_PRINT    0                   // 打印 wav 文件头信息
+#define SD_READ_BATCH       WAV_PLAYER_BUFFER_SIZE    // 一次读写 SD 卡 64KB 的内容 
 
-#define FFT_DATA_POINTS     256             // 32 点大约可以cover 6K 的范围
+#define FFT_DATA_POINTS     256                  // 32 点大约可以cover 6K 的范围
 
 
 
@@ -51,9 +51,9 @@ extern uint16_t Storage_Thread_Exist;
 
 
 FIL             wavFile;
-uint8_t*        ucWavData = (uint8_t *)(SDRAM_WRITE_READ_ADDR + 0x2000);            // 在 sdram 中存储歌曲 PCM 数据
+uint8_t*        ucWavData = (uint8_t *)(WAV_PLAYER_BUFFER);            // 在 sdram 中存储歌曲 PCM 数据
 uint32_t        uiPuleseBuf[DMA_BATCH];         // TIM5 CH4 的 PWM 占空比信息
-uint32_t        autoReload;                     // TIM5 的 autoreload
+uint32_t        uiAutoReload_TIM5;                     // TIM5 的 autoreload
 uint32_t        uiWavPlayIndex;                 // ucWavData 的 index，即当前播放位置
 uint64_t        ulWavPcmStart;                  // wav 文件 PCM 数据的起始位置
 uint32_t        uiWavDataLength;                // wav 文件的 PCM 数据长度
@@ -72,11 +72,15 @@ uint32_t        uiMusicCurrentMinute = 0;       // 音乐播放进度——分�
 uint32_t        uiMusicCurrentSecond = 0;       // 音乐播放进度——秒
 uint32_t        uiMusicCurrentProgress = 0;     // 音乐播放进度——百分比
 
-float32_t       fMusic_FFT_Data[FFT_DATA_POINTS * 2];
-float32_t       fMusic_FFT_Mag[FFT_DATA_POINTS / 2];
-uint16_t        Music_FFT_Ready = 0;
+float32_t       fMusic_FFT_Data[FFT_DATA_POINTS * 2];       // 音乐频谱 FFT 数据
+float32_t       fMusic_FFT_Mag[FFT_DATA_POINTS / 2];        // 音乐频谱 FFT 幅值
+uint16_t        Music_FFT_Ready = 0;                        // 音乐频谱 FFT 结果就绪
 
-
+extern uint16_t  *audio_record_buffer_sdram;
+extern uint32_t  audio_record_buffer_len;
+extern uint32_t  audio_record_buffer_index;
+extern uint16_t  Audio_Record_Replay;
+extern uint16_t Audio_Full_Record;
 
 
 
@@ -228,18 +232,18 @@ static void PlayWavMusic(char * fileName)
     }
 
 
-    autoReload = TIM_CLOCK / wavHeader.fmt_sample_rate;         // 计算 TIM5 的 autoreload
+    uiAutoReload_TIM5 = TIM_CLOCK / wavHeader.fmt_sample_rate;         // 计算 TIM5 的 autoreload
     // 设置好 TIM5 的寄存器
     HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_4);
     __HAL_TIM_SET_PRESCALER(&htim5, 0);
-    __HAL_TIM_SetAutoreload(&htim5, autoReload);
+    __HAL_TIM_SetAutoreload(&htim5, uiAutoReload_TIM5);
     __HAL_TIM_SetCounter(&htim5, 0);
 
 
     // 为第一次 DMA 启动准备数据
     uiMusicCofficient = ((1 << uiWavSampleDepth) - 1) * uiMusicVolumeD / uiMusicVolumeN;
     for (uint32_t i = 0; i < DMA_BATCH; i++)
-        uiPuleseBuf[i] = autoReload * ucWavData[(uiWavPlayIndex+=uiWavChannelNum)  % SD_READ_BATCH] / uiMusicCofficient;
+        uiPuleseBuf[i] = uiAutoReload_TIM5 * ucWavData[(uiWavPlayIndex+=uiWavChannelNum)  % SD_READ_BATCH] / uiMusicCofficient;
 
     HAL_TIM_PWM_Stop_DMA(&htim5, TIM_CHANNEL_4);
     HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);       // 启动 PWM
@@ -306,25 +310,38 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 
     if(htim->Instance == TIM5)
     {
-        if (uiWavPlayIndex < uiWavDataLength && Music_Play_On)
-            HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);
-        else
+        if (Audio_Record_Replay == 0)
         {
-            HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_4);
-            if(Music_Play_On)
+            if (uiWavPlayIndex < uiWavDataLength && Music_Play_On)
+                HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);
+            else
             {
-                f_close(&wavFile);
-                Music_Play_Start = 1;
-                if(LISTVIEW_GetNumRows(hListView) != 0){
-                    Music_Item_Current = (Music_Item_Current + 1) % LISTVIEW_GetNumRows(hListView);
-                    LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);        // 下一首
+                HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_4);
+                if (Music_Play_On)
+                {
+                    f_close(&wavFile);
+                    Music_Play_Start = 1;
+                    if (LISTVIEW_GetNumRows(hListView) != 0)
+                    {
+                        Music_Item_Current = (Music_Item_Current + 1) % LISTVIEW_GetNumRows(hListView);
+                        LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100); // 下一首
+                    }
                 }
             }
-        }
 
-        uiMusicCofficient = ((1 << uiWavSampleDepth) - 1) * uiMusicVolumeD / uiMusicVolumeN;
-        for (i = DMA_BATCH / 2; i < DMA_BATCH; i++)
-            uiPuleseBuf[i] = autoReload * ucWavData[(uiWavPlayIndex+=uiWavChannelNum) % SD_READ_BATCH] / uiMusicCofficient;
+            uiMusicCofficient = ((1 << uiWavSampleDepth) - 1) * uiMusicVolumeD / uiMusicVolumeN;
+            for (i = DMA_BATCH / 2; i < DMA_BATCH; i++)
+                uiPuleseBuf[i] = uiAutoReload_TIM5 * ucWavData[(uiWavPlayIndex += uiWavChannelNum) % SD_READ_BATCH] / uiMusicCofficient;
+        }
+        else if(Audio_Record_Replay == 1 && Audio_Full_Record == 1)
+        {
+            if (audio_record_buffer_index < audio_record_buffer_len && Audio_Record_Replay)
+                HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);
+            else
+                HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_4);
+            for (i = DMA_BATCH / 2; i < DMA_BATCH; i++)
+                uiPuleseBuf[i] = uiAutoReload_TIM5 * audio_record_buffer_sdram[audio_record_buffer_index++] / 0xfff;
+        }
     }
 }
 
@@ -340,19 +357,27 @@ void HAL_TIM_PWM_PulseFinishedHalfCpltCallback(TIM_HandleTypeDef *htim)
 
     if(htim->Instance == TIM5)
     {
-        for ( i = 0; i < DMA_BATCH / 2; i++)
-            uiPuleseBuf[i] = autoReload * ucWavData[(uiWavPlayIndex+=uiWavChannelNum)  % SD_READ_BATCH ] / uiMusicCofficient;
-
-        // 准备 FFT 数据
-        for ( i = 0; i < FFT_DATA_POINTS; i++)
+        if(Audio_Record_Replay == 0)
         {
-            fMusic_FFT_Data[2*i] = uiPuleseBuf[i];
-            fMusic_FFT_Data[2*i + 1] = 0;
+            for (i = 0; i < DMA_BATCH / 2; i++)
+                uiPuleseBuf[i] = uiAutoReload_TIM5 * ucWavData[(uiWavPlayIndex += uiWavChannelNum) % SD_READ_BATCH] / uiMusicCofficient;
+
+            // 准备 FFT 数据
+            for (i = 0; i < FFT_DATA_POINTS; i++)
+            {
+                fMusic_FFT_Data[2 * i] = uiPuleseBuf[i];
+                fMusic_FFT_Data[2 * i + 1] = 0;
+            }
+            arm_cfft_f32(&arm_cfft_sR_f32_len256, fMusic_FFT_Data, 0, 1);
+            arm_cmplx_mag_f32(fMusic_FFT_Data, fMusic_FFT_Mag, 128);
+            fMusic_FFT_Mag[0] /= 2;
+            Music_FFT_Ready = 1;
         }
-        arm_cfft_f32(&arm_cfft_sR_f32_len256, fMusic_FFT_Data, 0, 1);
-        arm_cmplx_mag_f32(fMusic_FFT_Data, fMusic_FFT_Mag, 128);
-        fMusic_FFT_Mag[0] /= 2;
-        Music_FFT_Ready = 1;
+        else if(Audio_Record_Replay == 1 && Audio_Full_Record == 1)
+        {
+            for (i = 0; i < DMA_BATCH / 2; i++)
+                uiPuleseBuf[i] = uiAutoReload_TIM5 * audio_record_buffer_sdram[audio_record_buffer_index++] / 0xfff;
+        }
     }
 }
 

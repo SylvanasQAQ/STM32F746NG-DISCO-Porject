@@ -104,7 +104,7 @@ int fputc(int ch, FILE *f)
 
 uint16_t Audio_DMA_Ready;                     // DMA 就绪标志
 /**
-  * @brief  ADC3 IN0 �?????????? DMA 完�?中断
+  * @brief  ADC3 IN0 �??????????? DMA 完�?中断
   * @param  ADC_HandleTypeDef *hadc
   * @retval None
   */

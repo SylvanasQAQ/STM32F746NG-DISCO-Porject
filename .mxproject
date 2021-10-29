@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=C:/Users/lks/Desktop/em/disco-f746-ng-project/Inc
+HeaderPath=D:/Files/em/projects/Inc
 HeaderFiles=stm32f7xx_it.h;stm32f7xx_hal_conf.h;main.h;GUIConf.h;HW_Init.h;GUI_App.h;STemwin_wrapper.h;FreeRTOSConfig.h;usb_device.h;usbd_conf.h;usbd_desc.h;usbd_storage_if.h;ffconf.h;bsp_driver_sd.h;sd_diskio.h;fatfs.h;fatfs_platform.h;bsp_driver_sdram.h;sdram_diskio.h;
-SourcePath=C:/Users/lks/Desktop/em/disco-f746-ng-project/Src
+SourcePath=D:/Files/em/projects/Src
 SourceFiles=stm32f7xx_it.c;stm32f7xx_hal_msp.c;main.c;GUIConf.c;HW_Init.c;GUI_App.c;STemwin_wrapper.c;WindowDLG.c;freertos.c;stm32f7xx_hal_timebase_tim.c;usb_device.c;usbd_conf.c;usbd_desc.c;usbd_storage_if.c;bsp_driver_sd.c;sd_diskio.c;fatfs.c;fatfs_platform.c;bsp_driver_sdram.c;sdram_diskio.c;
 
 [PreviousLibFiles]

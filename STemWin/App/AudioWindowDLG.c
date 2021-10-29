@@ -37,14 +37,11 @@
 #define ID_BUTTON_0 (GUI_ID_USER + 0x03)
 #define ID_BUTTON_1 (GUI_ID_USER + 0x04)
 #define ID_BUTTON_2 (GUI_ID_USER + 0x05)
+#define ID_CHECKBOX_0 (GUI_ID_USER + 0x06)
 
 
 // USER START (Optionally insert additional defines)
-GRAPH_DATA_Handle hGraphData_AudioWindow;
-uint16_t Audio_Record_OnOff = 0;
-uint16_t Audio_Record_Ready = 0;
-uint16_t Audio_Record_Replay = 0;
-extern uint16_t audio_main_freq_index;
+void MoveToAudioWindow(WM_HWIN hWin);
 // USER END
 
 /*********************************************************************
@@ -55,7 +52,16 @@ extern uint16_t audio_main_freq_index;
 */
 
 // USER START (Optionally insert additional static data)
+GRAPH_DATA_Handle hGraphData_AudioWindow;
+extern uint16_t Audio_Record_OnOff;                 // 音调提取开启标志
+extern uint16_t Audio_Record_Ready;                     // 音调提取完成标志
+extern uint16_t Audio_Record_Replay;                // 音调重放标志
+extern uint16_t audio_main_freq_index;
+extern uint32_t  audio_record_buffer_len;
+extern uint16_t Audio_Full_Record;
 
+extern uint16_t Audio_Thread_Exist;
+extern uint16_t Audio_Thread_Terminate;
 // USER END
 
 /*********************************************************************
@@ -67,8 +73,9 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { GRAPH_CreateIndirect, "Graph", ID_GRAPH_0, 0, 40, 380, 202, 0, 0x0, 0 },
   { TEXT_CreateIndirect, "Text", ID_TEXT_0, 200, 0, 80, 20, 0, 0x64, 0 },
   { BUTTON_CreateIndirect, "Start", ID_BUTTON_0, 390, 40, 80, 40, 0, 0x0, 0 },
-  { BUTTON_CreateIndirect, "Button", ID_BUTTON_1, 390, 130, 80, 40, 0, 0x0, 0 },
-  { BUTTON_CreateIndirect, "Button", ID_BUTTON_2, 390, 190, 80, 40, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "ReocrdButton", ID_BUTTON_1, 390, 145, 80, 40, 0, 0x0, 0 },
+  { BUTTON_CreateIndirect, "ReplayButton", ID_BUTTON_2, 390, 195, 80, 40, 0, 0x0, 0 },
+  { CHECKBOX_CreateIndirect, "Checkbox", ID_CHECKBOX_0, 390, 109, 85, 25, 0, 0x0, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -116,17 +123,24 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
     BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
     BUTTON_SetText(hItem, "Start");
     //
-    // Initialization of 'Button'
+    // Initialization of 'ReocrdButton'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1);
     BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
     BUTTON_SetText(hItem, "Record");
     //
-    // Initialization of 'Button'
+    // Initialization of 'ReplayButton'
     //
     hItem = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_2);
     BUTTON_SetFont(hItem, GUI_FONT_16B_ASCII);
     BUTTON_SetText(hItem, "Replay");
+    //
+    // Initialization of 'Checkbox'
+    //
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0);
+    CHECKBOX_SetText(hItem, "HiRes");
+    CHECKBOX_SetTextColor(hItem, GUI_MAKE_COLOR(0x0000D7FF));
+    CHECKBOX_SetFont(hItem, GUI_FONT_20B_ASCII);
     // USER START (Optionally insert additional code for further widget initialization)
     hItem = pMsg->hWin;
     WINDOW_SetBkColor(hItem, GUI_MAKE_COLOR(0x00E3F5D8));
@@ -165,7 +179,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       // USER END
       }
       break;
-    case ID_BUTTON_1: // Notifications sent by 'Button'
+    case ID_BUTTON_1: // Notifications sent by 'ReocrdButton'
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
@@ -173,10 +187,14 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         {
           Audio_Record_OnOff = 1;
           audio_main_freq_index = 0;
+          audio_record_buffer_len = 0;
+          Audio_Full_Record = CHECKBOX_GetState(WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0));
+
           hItem = WM_GetDialogItem(pMsg->hWin, Id);
           BUTTON_SetText(hItem, "Stop Rec");
           BUTTON_SetTextColor(hItem, 0, GUI_RED);
           WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_2));
+          WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0));
 
           WM_CreateTimer(pMsg->hWin, 0, 100, 0);        // 创建定时器
         }
@@ -187,6 +205,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
           BUTTON_SetText(hItem, "Record");
           BUTTON_SetTextColor(hItem, 0, GUI_BLACK);
           WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_2));
+          WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0));
         }
         // USER END
         break;
@@ -198,7 +217,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       // USER END
       }
       break;
-    case ID_BUTTON_2: // Notifications sent by 'Button'
+    case ID_BUTTON_2: // Notifications sent by 'ReplayButton'
       switch(NCode) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
@@ -207,6 +226,28 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
+    case ID_CHECKBOX_0: // Notifications sent by 'Checkbox'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      case WM_NOTIFICATION_VALUE_CHANGED:
+        // USER START (Optionally insert code for reacting on notification message)
+        Audio_Full_Record = CHECKBOX_GetState(WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0));
+        if(Audio_Thread_Exist == 1)
+          Audio_Thread_Terminate = 1;
+        MoveToAudioWindow(pMsg->hWin);
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -232,6 +273,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       BUTTON_SetText(hItem, "Record");
       BUTTON_SetTextColor(hItem, 0, GUI_BLACK);
       WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_2));       // 开启 replay 按键
+      WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_CHECKBOX_0));
     }
 
     if(Audio_Record_OnOff)        // 只有在开启音调提取后才会重启 timer

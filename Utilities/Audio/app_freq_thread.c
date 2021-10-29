@@ -6,9 +6,16 @@
 /* Includes ------------------------------------------------------------------*/
 #include "DIALOG.h"
 #include "main.h"
-#include <math.h>
+
+
 
 /* Defines ------------------------------------------------------------------*/
+#define TIM_CLOCK                   108000000           // APB1 的频率，即 TIM 的时钟频率
+#define SAMPLING_FREQUENCY          40000                // ADC 采样频率
+#define TIM2_PRESCALER              100                 // TIM2 的预分频系数
+#define TIM2_AUTORELOAD             (TIM_CLOCK / TIM2_PRESCALER / SAMPLING_FREQUENCY - 1)       // 在👆上述条件下的 TIM2 autoreload
+
+
 
 /* Functions prototypes ---------------------------------------------*/
 static void Freq_FFT_Calculation();
@@ -80,8 +87,9 @@ static void FreqAnalysisThread(void *argument)
     extern GUI_HWIN hCurrentWindow;
     extern GUI_HWIN hFreqAnalysisWindow;
 
-    __HAL_TIM_SET_AUTORELOAD(&htim2, 27-1);
-    __HAL_TIM_SetCounter(&htim2, 0);           // Fs = 8K Hz
+    __HAL_TIM_SET_PRESCALER(&htim2, TIM2_PRESCALER);
+    __HAL_TIM_SET_AUTORELOAD(&htim2, TIM2_AUTORELOAD);
+    __HAL_TIM_SetCounter(&htim2, 0);          
     HAL_ADC_Start_IT(&hadc3);
     HAL_ADC_Start_DMA(&hadc3, (uint32_t *)audio_record_buffer, 1024);
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);

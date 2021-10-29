@@ -18,7 +18,7 @@
                     <analyzeTimeoutEnabled>1</analyzeTimeoutEnabled>
                     <analyzeTimeout>1</analyzeTimeout>
                     <enableParallel>1</enableParallel>
-                    <parallelThreads>4</parallelThreads>
+                    <parallelThreads>8</parallelThreads>
                     <enableFalsePositives>0</enableFalsePositives>
                     <messagesLimitEnabled>1</messagesLimitEnabled>
                     <messagesLimit>100</messagesLimit>

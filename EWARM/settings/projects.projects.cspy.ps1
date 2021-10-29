@@ -23,9 +23,9 @@
 
 if ($debugfile -eq "")
 {
-& "C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.2\common\bin\cspybat" -f "C:\Users\lks\Desktop\em\disco-f746-ng-project\EWARM\settings\projects.projects.general.xcl" --backend -f "C:\Users\lks\Desktop\em\disco-f746-ng-project\EWARM\settings\projects.projects.driver.xcl" 
+& "D:\Program Files (x86)\IAR\common\bin\cspybat" -f "D:\Files\em\projects\EWARM\settings\projects.projects.general.xcl" --backend -f "D:\Files\em\projects\EWARM\settings\projects.projects.driver.xcl" 
 }
 else
 {
-& "C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.2\common\bin\cspybat" -f "C:\Users\lks\Desktop\em\disco-f746-ng-project\EWARM\settings\projects.projects.general.xcl" --debug_file=$debugfile --backend -f "C:\Users\lks\Desktop\em\disco-f746-ng-project\EWARM\settings\projects.projects.driver.xcl" 
+& "D:\Program Files (x86)\IAR\common\bin\cspybat" -f "D:\Files\em\projects\EWARM\settings\projects.projects.general.xcl" --debug_file=$debugfile --backend -f "D:\Files\em\projects\EWARM\settings\projects.projects.driver.xcl" 
 }
