@@ -31,6 +31,7 @@ typedef struct alarm_struct
 {
     uint32_t hour;
     uint32_t minute;
+    uint32_t second;
     uint8_t weekday;                  // [bitmap] weekday 的 bit 0~6 分别对应 周日, 周一, ...，bit 7未使用
     uint8_t alarmVolume;              // 闹钟音量
     uint8_t property;                 // [bitmap] 闹钟属性

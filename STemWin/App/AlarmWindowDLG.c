@@ -45,14 +45,15 @@
 #define ID_LISTWHEEL_0 (GUI_ID_USER + 0x09)
 #define ID_LISTWHEEL_1 (GUI_ID_USER + 0x0A)
 #define ID_DROPDOWN_0 (GUI_ID_USER + 0x0B)
-#define ID_SLIDER_0 (GUI_ID_USER + 0x0D)
-#define ID_TEXT_1 (GUI_ID_USER + 0x0E)
-#define ID_TEXT_2 (GUI_ID_USER + 0x0F)
-#define ID_TEXT_3 (GUI_ID_USER + 0x10)
-#define ID_RADIO_0 (GUI_ID_USER + 0x11)
-#define ID_CHECKBOX_7 (GUI_ID_USER + 0x12)
-#define ID_BUTTON_0 (GUI_ID_USER + 0x13)
-#define ID_BUTTON_1 (GUI_ID_USER + 0x14)
+#define ID_SLIDER_0 (GUI_ID_USER + 0x0C)
+#define ID_TEXT_1 (GUI_ID_USER + 0x0D)
+#define ID_TEXT_2 (GUI_ID_USER + 0x0E)
+#define ID_TEXT_3 (GUI_ID_USER + 0x0F)
+#define ID_RADIO_0 (GUI_ID_USER + 0x10)
+#define ID_CHECKBOX_7 (GUI_ID_USER + 0x11)
+#define ID_BUTTON_0 (GUI_ID_USER + 0x12)
+#define ID_BUTTON_1 (GUI_ID_USER + 0x13)
+#define ID_LISTWHEEL_2 (GUI_ID_USER + 0x14)
 
 
 // USER START (Optionally insert additional defines)
@@ -82,15 +83,15 @@ void MoveToAlarmWindow(WM_HWIN hWin);
 static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { WINDOW_CreateIndirect, "AlarmWindow", ID_WINDOW_0, 0, 0, 480, 242, 0, 0x0, 0 },
   { TEXT_CreateIndirect, "Text", ID_TEXT_0, 140, 3, 200, 30, 0, 0x64, 0 },
-  { CHECKBOX_CreateIndirect, "Checkbox1", ID_CHECKBOX_0, 30, 30, 60, 20, 0, 0x0, 0 },
-  { CHECKBOX_CreateIndirect, "Checkbox2", ID_CHECKBOX_1, 30, 60, 60, 20, 0, 0x0, 0 },
-  { CHECKBOX_CreateIndirect, "Checkbox3", ID_CHECKBOX_2, 30, 90, 60, 20, 0, 0x0, 0 },
-  { CHECKBOX_CreateIndirect, "Checkbox4", ID_CHECKBOX_3, 30, 120, 60, 20, 0, 0x0, 0 },
-  { CHECKBOX_CreateIndirect, "Checkbox5", ID_CHECKBOX_4, 30, 150, 60, 20, 0, 0x0, 0 },
-  { CHECKBOX_CreateIndirect, "Checkbox6", ID_CHECKBOX_5, 30, 180, 60, 20, 0, 0x0, 0 },
-  { CHECKBOX_CreateIndirect, "Checkbox7", ID_CHECKBOX_6, 30, 210, 60, 20, 0, 0x0, 0 },
-  { LISTWHEEL_CreateIndirect, "Listwheel", ID_LISTWHEEL_0, 99, 40, 40, 178, 0, 0x0, 0 },
-  { LISTWHEEL_CreateIndirect, "Listwheel", ID_LISTWHEEL_1, 154, 40, 40, 178, 0, 0x0, 0 },
+  { CHECKBOX_CreateIndirect, "Checkbox1", ID_CHECKBOX_0, 20, 30, 60, 20, 0, 0x0, 0 },
+  { CHECKBOX_CreateIndirect, "Checkbox2", ID_CHECKBOX_1, 20, 60, 60, 20, 0, 0x0, 0 },
+  { CHECKBOX_CreateIndirect, "Checkbox3", ID_CHECKBOX_2, 20, 90, 60, 20, 0, 0x0, 0 },
+  { CHECKBOX_CreateIndirect, "Checkbox4", ID_CHECKBOX_3, 20, 120, 60, 20, 0, 0x0, 0 },
+  { CHECKBOX_CreateIndirect, "Checkbox5", ID_CHECKBOX_4, 20, 150, 60, 20, 0, 0x0, 0 },
+  { CHECKBOX_CreateIndirect, "Checkbox6", ID_CHECKBOX_5, 20, 180, 60, 20, 0, 0x0, 0 },
+  { CHECKBOX_CreateIndirect, "Checkbox7", ID_CHECKBOX_6, 20, 210, 60, 20, 0, 0x0, 0 },
+  { LISTWHEEL_CreateIndirect, "Listwheel", ID_LISTWHEEL_0, 75, 40, 40, 178, 0, 0x0, 0 },
+  { LISTWHEEL_CreateIndirect, "Listwheel", ID_LISTWHEEL_1, 125, 40, 40, 178, 0, 0x0, 0 },
   { DROPDOWN_CreateIndirect, "Dropdown", ID_DROPDOWN_0, 390, 30, 80, 21, 0, 0x0, 0 },
   { SLIDER_CreateIndirect, "Slider", ID_SLIDER_0, 233, 70, 120, 20, 0, 0x0, 0 },
   { TEXT_CreateIndirect, "Text", ID_TEXT_1, 240, 40, 100, 20, 0, 0x64, 0 },
@@ -100,6 +101,7 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
   { CHECKBOX_CreateIndirect, "Checkbox", ID_CHECKBOX_7, 248, 185, 96, 20, 0, 0x0, 0 },
   { BUTTON_CreateIndirect, "ButtonOn", ID_BUTTON_0, 380, 125, 80, 40, 0, 0x0, 0 },
   { BUTTON_CreateIndirect, "ButtonOf", ID_BUTTON_1, 380, 185, 80, 40, 0, 0x0, 0 },
+  { LISTWHEEL_CreateIndirect, "Listwheel", ID_LISTWHEEL_2, 175, 40, 40, 178, 0, 0x0, 0 },
   // USER START (Optionally insert additional widgets)
   // USER END
 };
@@ -298,9 +300,20 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       LISTWHEEL_SetOwnerDraw(hItem, _OwnerDraw);
       LISTWHEEL_SetSel(hItem, 0);
     }
+    hItem = WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_2);
+    LISTWHEEL_SetLineHeight(hItem, 34);
+    LISTWHEEL_SetSnapPosition(hItem, (178 - 34) / 2);
+    LISTWHEEL_SetFont(hItem, GUI_FONT_16B_ASCII);
+    LISTWHEEL_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
+    LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_UNSEL, 0x191919);
+    LISTWHEEL_SetTextColor(hItem, LISTWHEEL_CI_SEL, 0x007dfe);
+    LISTWHEEL_SetDeceleration(hItem, 35);
+    LISTWHEEL_SetOwnerDraw(hItem, _OwnerDraw);
+    LISTWHEEL_SetSel(hItem, 0);
 
     LISTWHEEL_SetText(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0), _apHour);
     LISTWHEEL_SetText(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1), _apMinute);
+    LISTWHEEL_SetText(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_2), _apMinute);
 
     hItem = WM_GetDialogItem(pMsg->hWin, ID_SLIDER_0);
     SLIDER_SetRange(hItem, 10, 100);
@@ -573,6 +586,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 
         ListWheelMoveToEffect(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_0), pAlarm->hour);
         ListWheelMoveToEffect(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_1), pAlarm->minute);
+        ListWheelMoveToEffect(WM_GetDialogItem(pMsg->hWin, ID_LISTWHEEL_2), pAlarm->second);
 
         if(pAlarm->alarmVolume < 10 || pAlarm->alarmVolume > 100)
           pAlarm->alarmVolume = 10;
@@ -691,6 +705,26 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
         break;
       case WM_NOTIFICATION_RELEASED:
         // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      // USER START (Optionally insert additional code for further notification handling)
+      // USER END
+      }
+      break;
+    case ID_LISTWHEEL_2: // Notifications sent by 'Listwheel'
+      switch(NCode) {
+      case WM_NOTIFICATION_CLICKED:
+        // USER START (Optionally insert code for reacting on notification message)
+        ListWheelClickedEffect(WM_GetDialogItem(pMsg->hWin, Id));
+        // USER END
+        break;
+      case WM_NOTIFICATION_RELEASED:
+        // USER START (Optionally insert code for reacting on notification message)
+        // USER END
+        break;
+      case WM_NOTIFICATION_SEL_CHANGED:
+        // USER START (Optionally insert code for reacting on notification message)
+        pAlarm->second = ListWheelSelectededEffect(WM_GetDialogItem(pMsg->hWin, Id));
         // USER END
         break;
       // USER START (Optionally insert additional code for further notification handling)

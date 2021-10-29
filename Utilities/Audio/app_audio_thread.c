@@ -14,7 +14,7 @@
 
 /* Private defines -----------------------------------------------------------*/
 #define TIM_CLOCK                   108000000           // APB1 的频率，即 TIM 的时钟频率
-#define SAMPLING_FREQUENCY          8000                // ADC 采样频率
+#define SAMPLING_FREQUENCY          16000                // ADC 采样频率
 #define TIM2_PRESCALER              100                 // TIM2 的预分频系数
 #define TIM2_AUTORELOAD             (TIM_CLOCK / TIM2_PRESCALER / SAMPLING_FREQUENCY - 1)       // 在👆上述条件下的 TIM2 autoreload
 

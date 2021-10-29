@@ -104,7 +104,7 @@ int fputc(int ch, FILE *f)
 
 uint16_t Audio_DMA_Ready;                     // DMA 就绪标志
 /**
-  * @brief  ADC3 IN0 �??????????? DMA 完�?中断
+  * @brief  ADC3 IN0 �??????????? DMA 完�?中断
   * @param  ADC_HandleTypeDef *hadc
   * @retval None
   */
@@ -340,7 +340,7 @@ static void MX_ADC3_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_15CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc3, &sConfig) != HAL_OK)
   {
     Error_Handler();

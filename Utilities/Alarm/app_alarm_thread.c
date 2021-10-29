@@ -98,7 +98,7 @@ static void AlarmThread(void *argument)
         }
 
         // 延时一秒
-        vTaskDelay(1000);
+        vTaskDelay(500);
     }
 }
 
@@ -135,7 +135,7 @@ static void CheckAlarm()
             continue;
 
         // 若闹钟开启，检查闹钟时间是否等于当前时间
-        if (os_time_hour == p->hour && os_time_minute == p->minute)
+        if (os_time_hour == p->hour && os_time_minute == p->minute && os_time_second == p->second)
         {
             if (alarm_isTriggered(p))       // 判断闹钟今天是否已经触发过
                 continue;
