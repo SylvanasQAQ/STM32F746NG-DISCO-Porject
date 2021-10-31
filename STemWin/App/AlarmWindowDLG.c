@@ -70,7 +70,6 @@
 extern void ListWheelMoveToEffect(GUI_HWIN hItem, uint8_t pos);
 extern U8 ListWheelSelectededEffect(GUI_HWIN hItem);
 extern void ListWheelClickedEffect(GUI_HWIN hItem);
-extern uint8_t  Alarm_Thread_Exist;
 
 
 void MoveToAlarmWindow(WM_HWIN hWin);
@@ -680,8 +679,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
       case WM_NOTIFICATION_CLICKED:
         // USER START (Optionally insert code for reacting on notification message)
         alarm_setEnabled(pAlarm);
-        if(Alarm_Thread_Exist == 0)
-          vAlarmTaskCreate();     // 启动闹钟线程
+        vAlarmTaskCreate();         // 启动闹钟线程
         WM_DisableWindow(WM_GetDialogItem(pMsg->hWin, Id));
         WM_EnableWindow(WM_GetDialogItem(pMsg->hWin, ID_BUTTON_1));
         // USER END

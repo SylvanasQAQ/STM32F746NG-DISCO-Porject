@@ -54,19 +54,19 @@ float32_t audio_fft_mag[512];                   // FFT 频率幅值
 uint16_t audio_main_freq[1536];                  // 提取到的音调
 uint16_t audio_main_freq_index = 0;            // 当前记录位置 index
 
-uint16_t Audio_Full_Record = 0;
-uint16_t  *audio_record_buffer_sdram = (uint16_t*)(AUDIO_RECORD_BUFFER);              // 存储在 sdram 中的语音波形
-float32_t *audio_fir_buffer = (float32_t*)(AUDIO_RECORD_BUFFER + 0x1E0000);
-float32_t *audio_fir_state_buffer = (float32_t*)(AUDIO_RECORD_BUFFER + 0x1E5000);   
-uint32_t  audio_record_buffer_index = 0;
-uint32_t  audio_record_buffer_len = 0;
+uint16_t    Audio_Full_Record = 0;
+uint16_t    *audio_record_buffer_sdram = (uint16_t*)(AUDIO_RECORD_BUFFER);              // 存储在 sdram 中的语音波形
+float32_t   *audio_fir_buffer = (float32_t*)(AUDIO_RECORD_BUFFER + 0x1E0000);
+float32_t   *audio_fir_state_buffer = (float32_t*)(AUDIO_RECORD_BUFFER + 0x1E5000);   
+uint32_t    audio_record_buffer_index = 0;
+uint32_t    audio_record_buffer_len = 0;
 extern uint32_t  uiPuleseBuf[];         // TIM5 CH4 的 PWM 占空比信息
-extern uint32_t  uiAutoReload_TIM5; 
-extern float32_t fir_filter[];
+extern uint32_t  uiAutoReload_TIM5;     // TIM5 的 autoreload
+extern float32_t fir_filter[];          // fir 滤波器
 static arm_fir_instance_f32 S;
 uint16_t    firBlockSize = 1024;
 
-// 一些音符的频率
+// 一些音符的频率，用于矫正频率
 uint16_t music_frequencies[] = {65, 69, 73, 78, 82, 87, 92, 98, 103, 116, 123, 
                             131, 139, 147, 156, 165, 175, 185, 196, 208, 220, 233, 247,
                             262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494,
@@ -93,7 +93,7 @@ extern ADC_HandleTypeDef hadc3;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim5;
 
-extern U16               Music_Play_On;               // 音乐播放中标志
+
 
 
 
@@ -121,6 +121,9 @@ const osThreadAttr_t app_audioTask_attributes = {
   */
 void vAudioTaskCreate()
 {
+    if(Audio_Thread_Exist == 1)
+        return;
+
     #ifdef CMSIS_V1
     xTaskCreate(AudioThread, "Audio Task", 256, NULL, osPriorityNormal, &app_audioTaskHandle);
     #endif
@@ -198,6 +201,9 @@ static void AudioThread(void *argument)
  */
 static void HardwareInit()
 {
+    extern U16    Music_Play_On;               // 音乐播放中标志
+
+
     /**
      * 开启 ADC3 IN0 的准备
      *  1. 设置 ADC3 采集的触发信号 TIM2
@@ -374,7 +380,7 @@ static void AudioSingalExtract()
         for (int i = 0; i < 1; i++)
             arm_fir_f32(&S, audio_fft_data + (i * firBlockSize), audio_fir_buffer + (i * firBlockSize), firBlockSize);
         for (int i = 0; i < 1024; i++)
-            audio_record_buffer_sdram[audio_record_buffer_len++] = _abs(audio_fir_buffer[i] + 1200)*5;
+            audio_record_buffer_sdram[audio_record_buffer_len++] = _abs((int)audio_fir_buffer[i] + 1200)*5;
 
         if(audio_record_buffer_len > AUDIO_FULL_RECORD_FREQUENCY * AUDIO_LENGTH)
         {

@@ -106,8 +106,6 @@ uint16_t osGetCPUUsage (void)
  * 
  * 
  */
-/************************ block end ************************/
-
 size_t os_memory_total = configTOTAL_HEAP_SIZE;
 size_t os_memory_free;
 
@@ -117,6 +115,7 @@ uint16_t osGetMemUsage(void)
     return  100 - os_memory_free*100 / os_memory_total;
 }
 
+/************************ block end ************************/
 
 
 

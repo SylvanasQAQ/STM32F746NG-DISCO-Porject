@@ -280,13 +280,13 @@ static void AddFilesToMusicPlayerList(WM_HWIN hWin)
   WaveHeader_t          wavHeader;
 
   hTree = WM_GetDialogItem(hWin, ID_TREEVIEW_0);
-  TREEVIEW_ITEM_GetText(hTreeItemCur = TREEVIEW_GetSel(hTree), trackBuf, 100);
+  TREEVIEW_ITEM_GetText(hTreeItemCur = TREEVIEW_GetSel(hTree), (unsigned char*)trackBuf, 100);
   while (1)
   {
     if(strcmp(trackBuf, "SDCard[0:]") == 0)
       break;
     hTreeItemCur = TREEVIEW_GetItem(hTree, hTreeItemCur, TREEVIEW_GET_PARENT);
-    TREEVIEW_ITEM_GetText(hTreeItemCur, pathBuf, 100);
+    TREEVIEW_ITEM_GetText(hTreeItemCur, (unsigned char*)pathBuf, 100);
     if (strcmp(pathBuf, "SDCard[0:]") == 0)
     {
       pathBuf[0] = '/';

@@ -464,11 +464,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
   case WM_PRE_PAINT:
     GUI_MULTIBUF_Begin();
     break;
-  case WM_POST_PAINT:
-    GUI_MULTIBUF_End();
-    break;
   case WM_PAINT:
     PaintEventHandler();
+    break;
+  case WM_POST_PAINT:
+    GUI_MULTIBUF_End();
     break;
   // USER END
   default:
@@ -523,8 +523,7 @@ static void PlayButtonEventHandler(WM_MESSAGE * pMsg)
     LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);     // 获取文件全路径
 
     Music_Play_Start = 1;         // 置位播放标志
-    if (!Music_Thread_Exist)      // 如果音乐线程未启动，则新建一个线程
-      vMusicTaskCreate();         // 启动音乐线程
+    vMusicTaskCreate();         // 启动音乐线程
     if(!Timer_Exist){
       Timer_Exist = 1;
       WM_CreateTimer(pMsg->hWin, 0, 100, 0);
@@ -582,7 +581,7 @@ static void TimerCallbackHandler(WM_MESSAGE * pMsg)
   static uint16_t      msCount = 0;
   static const  GUI_RECT DrawingRect = {0, 0, 252, 130};
 
-  msCount += 20;
+  msCount += 5;
   if(Music_FFT_Ready)
     WM_InvalidateRect(pMsg->hWin, &DrawingRect);
 
@@ -618,7 +617,7 @@ static void TimerCallbackHandler(WM_MESSAGE * pMsg)
 
   if(Music_Thread_Exist){
 #ifdef CMSIS_V1
-    WM_RestartTimer(pMsg->Data.v, 20);
+    WM_RestartTimer(pMsg->Data.v, 5);
 #endif
 
 #ifdef CMSIS_V2
@@ -643,12 +642,12 @@ static void PaintEventHandler()
 {
   if (Music_FFT_Ready)
   {
-    Music_FFT_Ready = 0;
-    
     GUI_Clear();
     GUI_SetColor(GUI_WHITE);
     GUI_DrawRoundedFrame(8, 2, 248, 136, 3, 2);    
     DrawSpectrum(12, 6 + 128 - 128);
+
+    Music_FFT_Ready = 0;
   }
 }
 

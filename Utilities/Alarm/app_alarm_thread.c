@@ -28,12 +28,11 @@ static void AlarmAlert();
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim5;
 
-uint8_t AlarmTriggered;        // alarm 触发指示       1 -- 有 alarm 触发， 0 -- 无 alarm 触发
-uint8_t AlarmLightEffect;      // alarm 灯光效果指示    1 -- alarm 开启了灯光效果，0 -- alarm 未开启灯光效果
-uint8_t AlarmVolume;           // alarm 音量
-
-uint8_t Alarm_Thread_Exist = 0;
-char    AlarmSongPath[128] = "/The Dawn.wav";
+uint8_t     AlarmTriggered;        // alarm 触发指示       1 -- 有 alarm 触发， 0 -- 无 alarm 触发
+uint8_t     AlarmLightEffect;      // alarm 灯光效果指示    1 -- alarm 开启了灯光效果，0 -- alarm 未开启灯光效果
+uint8_t     AlarmVolume;           // alarm 音量
+uint8_t     Alarm_Thread_Exist = 0;
+char        AlarmSongPath[128] = "/The Dawn.wav";       // 闹钟歌曲路径
 
 
 
@@ -59,6 +58,9 @@ const osThreadAttr_t app_alarmTask_attributes = {
 
 void vAlarmTaskCreate(void *argument)
 {
+    if (Alarm_Thread_Exist == 1)
+        return;
+        
 #ifdef CMSIS_V1
     xTaskCreate(AlarmThread, "Alarm Task", 512, NULL, osPriorityNormal, &app_alarmTaskHandle);
 #endif
@@ -174,22 +176,22 @@ static void CheckAlarm()
 static void AlarmAlert()
 {
     extern char       musicPath[100];
-    extern uint16_t   Music_Play_Start;            // 音乐开始标志
-    extern uint16_t Music_Play_Restart;            // 音乐开始标志
-    extern uint16_t Music_Thread_Exist;            // 音乐后台线程运行标志
-    extern uint32_t uiMusicVolumeN;                // 音量系数——分子
-    extern uint32_t uiMusicVolumeD;                // 音量系数——分母
-    FIL file;
+    extern uint16_t   Music_Play_Start;              // 音乐开始标志
+    extern uint16_t   Music_Play_Restart;            // 音乐重播标志
+    extern uint32_t   uiMusicVolumeN;                // 音量系数——分子
+    extern uint32_t   uiMusicVolumeD;                // 音量系数——分母
+    FIL               file;
 
     AlarmTriggered = 0;
-    if (AlarmLightEffect)
+    if (AlarmLightEffect)               // 开启了灯光效果，初始化 TIM3 产生 PWM 波
     {
         __HAL_TIM_SET_PRESCALER(&htim3, 10800 - 1);
         __HAL_TIM_SET_AUTORELOAD(&htim3, 500 - 1);
-        __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2, 100);
+        __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2, 300);
         HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
     }
 
+    // 播放音乐
     strcpy(musicPath, AlarmSongPath);
     if (f_open(&file, AlarmSongPath, FA_READ) == FR_OK)
     {
@@ -199,8 +201,7 @@ static void AlarmAlert()
         // set volume
         uiMusicVolumeD = 50;
         uiMusicVolumeN = AlarmVolume > 50 ? (AlarmVolume - 50) * 4 + 50 : AlarmVolume;
-        if (Music_Thread_Exist == 0)
-            vMusicTaskCreate(); // 启动音乐线程
+        vMusicTaskCreate(); // 启动音乐线程
     }
     else
     {

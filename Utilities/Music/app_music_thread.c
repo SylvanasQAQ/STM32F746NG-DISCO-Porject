@@ -47,7 +47,6 @@ char            currentMusicPath[100];              // 当前正在播放音乐�
 extern char     musicPath[100];                     // 音乐文件路径
 extern WM_HWIN  hListView;
 extern uint16_t Storage_Read_Request;
-extern uint16_t Storage_Thread_Exist;
 
 
 FIL             wavFile;
@@ -80,7 +79,7 @@ extern uint16_t  *audio_record_buffer_sdram;
 extern uint32_t  audio_record_buffer_len;
 extern uint32_t  audio_record_buffer_index;
 extern uint16_t  Audio_Record_Replay;
-extern uint16_t Audio_Full_Record;
+extern uint16_t  Audio_Full_Record;
 
 
 
@@ -107,6 +106,8 @@ const osThreadAttr_t app_musicTask_attributes = {
  */
 void vMusicTaskCreate()
 {
+    if (Music_Thread_Exist == 1)            // 如果已存在 Music 线程就直接返回
+        return;
 #ifdef CMSIS_V1
     xTaskCreate(MusicThread, "Music Task", 512, NULL, osPriorityNormal, &app_musicTaskHandle);
 #endif
@@ -130,8 +131,7 @@ static void MusicThread(void *argument)
     extern GUI_HWIN hMusicWindow;
 
     Music_Thread_Exist = 1;
-    if(Storage_Thread_Exist == 0)
-        vStorageTaskCreate();           // 启动存储线程（用于后台读取文件
+    vStorageTaskCreate();           // 启动存储线程（用于后台读取文件
 
     for (;;)
     {
@@ -169,7 +169,7 @@ static void PlayMusic()
         Music_Play_Start = 0;
         Music_Play_On = 1;
 
-        if (strcmp(musicPath, currentMusicPath) != 0 || Music_Play_Restart == 1) // 新歌曲播放
+        if (strcmp(musicPath, currentMusicPath) != 0 || Music_Play_Restart == 1)        // 新歌曲播放
         {
             Music_Play_Restart = 0;
             while(Storage_Read_Request)
@@ -390,11 +390,12 @@ static void Storage_Thread_Read(FIL *fp, uint64_t offset, void *buff, uint32_t s
     extern uint32_t Storage_Read_uiSize;
     extern uint32_t Storage_Read_uiNum;
     extern uint16_t Storage_Read_Request;
+    extern uint32_t Storage_Read_fptr;
     
     while(Storage_Read_Request)         //等待上一次读完成
         osDelay(1);
     Storage_Read_pFile = fp;
-    f_lseek(fp, ulWavPcmStart + offset);
+    f_lseek(fp, Storage_Read_fptr = ulWavPcmStart + offset);
     Storage_Read_pBuffer = buff;
     Storage_Read_uiSize = size;
     Storage_Read_Request = 1;
