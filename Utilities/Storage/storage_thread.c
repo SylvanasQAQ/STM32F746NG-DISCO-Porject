@@ -304,7 +304,12 @@ static void SaveInfoBeforeReboot()
   */
 static void RebootTimerCallback(const void *n)
 {  
-  NVIC_SystemReset();
+    if(Timer_Reboot_Exist == 1)
+    {
+        Timer_Reboot_Exist = 0;
+        osTimerDelete(timer_reboot);
+    }
+    NVIC_SystemReset();
 }
 #endif
 
@@ -317,7 +322,8 @@ static void RebootTimerCallback(const void *n)
   */
 static void RebootTimerCallback(void *n)
 {  
-  NVIC_SystemReset();
+    Timer_Reboot_Exist = 0;
+    NVIC_SystemReset();
 }
 #endif
 
@@ -332,12 +338,12 @@ static void vRebootTimerCraete()
 {
 #ifdef CMSIS_V1
   osTimerDef(timer_reboot, RebootTimerCallback);
-  timer_reboot = osTimerCreate(osTimer(timer_reboot), osTimerOnce, NULL);
+  timer_reboot = osTimerCreate(osTimer(timer_reboot), osTimerPeriodic, NULL);
   osTimerStart(timer_reboot, 3000);
 #endif
 
 #ifdef CMSIS_V2
-  timer_reboot = osTimerNew(RebootTimerCallback, osTimerOnce, NULL, NULL);
+  timer_reboot = osTimerNew(RebootTimerCallback, osTimerPeriodic, NULL, NULL);
   osTimerStart(timer_reboot, 3000);
 #endif
 }

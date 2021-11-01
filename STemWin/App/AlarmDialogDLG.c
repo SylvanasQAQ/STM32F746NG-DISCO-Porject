@@ -206,7 +206,7 @@ WM_HWIN CreateAlarmDialog_Self(char * title, char * text, DIALOG_TYPE type) {
 
   if(type == DIALOG_REBOOT)
   {
-    BUTTON_SetText(WM_GetDialogItem(hWin, ID_BUTTON_0), "Reboot");
+    BUTTON_SetText(WM_GetDialogItem(hWin, ID_BUTTON_0), "OK>_<");
     BUTTON_SetTextColor(WM_GetDialogItem(hWin, ID_BUTTON_0), 0, GUI_RED);
   }
   return hWin;
@@ -226,8 +226,6 @@ static void ButtonEventProcess(WM_HWIN hWin)
     MoveToAlarmWindow(hAlarmWindow);
   }
 
-  if(dialog_type & DIALOG_REBOOT)
-    NVIC_SystemReset();
 
   if(DIALOG_TOP_EXIST == 1){
     WM_SetStayOnTop(hStayOnTopWindow, 1);

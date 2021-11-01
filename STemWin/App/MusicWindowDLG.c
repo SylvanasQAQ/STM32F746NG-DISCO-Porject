@@ -547,7 +547,7 @@ void MusicWindowPlayButtonHit(WM_HWIN hWin)
     vMusicTaskCreate();         // 启动音乐线程
     if(!Timer_Exist){
       Timer_Exist = 1;
-      WM_CreateTimer(hWin, 0, 100, 0);
+      WM_CreateTimer(hWin, 0, 1000, 0);
     }
   }
 }
