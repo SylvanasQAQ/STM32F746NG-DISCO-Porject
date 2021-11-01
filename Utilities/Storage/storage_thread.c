@@ -12,7 +12,7 @@
 
 /* Defines ------------------------------------------------------------------*/
 #define SD_BLOCKSIZE                    512
-#define SD_SCAN_FILES_ENABLE            1           // 是否开机扫描 sd 卡文件
+#define SD_SCAN_FILES_ENABLE            0           // 是否开机扫描 sd 卡文件
 
 
 
@@ -93,7 +93,7 @@ static void StorageThread(void *argument)
         InitFatFS();
         ReadFile();
 
-        if (Storage_Read_Request == 0 && Music_Thread_Exist == 0)
+        if (Storage_Read_Request == 0 && Music_Thread_Exist == 0)       // 当音乐线程存在时，存储线程不退出
         {
             Storage_Thread_Exist = 0;
 #ifdef CMSIS_V1
@@ -104,7 +104,7 @@ static void StorageThread(void *argument)
 #endif
         }
 
-        osDelay(10);
+        vTaskDelay(10);
     }
 }
 
@@ -113,6 +113,7 @@ static void StorageThread(void *argument)
 
 /**
  * @brief  初始化 FAT 文件系统
+ * @note   支持热插拔 SD 卡
  * @param  None
  * @retval None
  */
@@ -120,37 +121,41 @@ static void InitFatFS()
 {
     static FRESULT fatfs_ret[4];
     extern SD_HandleTypeDef hsd1;
-    extern HAL_StatusTypeDef HAL_SD_DeInit(SD_HandleTypeDef *hsd);
 
     if (Fatfs_OK == 0)
     {
         HAL_SD_DeInit(&hsd1);
+        osDelay(10);
+        FATFS_UnLinkDriver("0:/");          // 用于支持热插拔
         MX_FATFS_Init();
         MX_USB_DEVICE_Init();
 
-        fatfs_ret[0] = f_mount(&SDFatFS, "", 1);
+        f_mount(NULL,"",0);
+        fatfs_ret[0] = f_mount(&SDFatFS, "", 1);        // 1. 挂载文件系统
         if (fatfs_ret[0] == FR_OK)
         {
-            fatfs_ret[1] = f_open(&SDFile, "test.txt", FA_CREATE_ALWAYS | FA_WRITE);
+            fatfs_ret[1] = f_open(&SDFile, "test.txt", FA_CREATE_ALWAYS | FA_WRITE);        // 2. 打开测试文件
             if (fatfs_ret[1] == FR_OK)
             {
-                fatfs_ret[2] = (FRESULT)f_printf(&SDFile, "Hello %d\n", 112);
-                fatfs_ret[3] = f_close(&SDFile);
-                if(fatfs_ret[3] == FR_OK)
+                fatfs_ret[2] = (FRESULT)f_printf(&SDFile, "Hello %d\n", 112);               // 3. 向测试文件中写入
+                fatfs_ret[3] = f_close(&SDFile);                                            // 4. 关闭测试文件
+                if(fatfs_ret[3] == FR_OK)           // 检测返回值是否为 FR_OK
                 {
-                    printf("FAT fs OK!\n");
-                    f_unlink("test.txt");
+                    printf("@@@FAT fs OK!\n");         // 文件系统测试成功
+                    f_unlink("test.txt");           // 删除测试文件
 
-                    Fatfs_OK = 1;
+                    Fatfs_OK = 1;                   // 置位文件系统初始化成功标志
                     if (SD_SCAN_FILES_ENABLE)
-                        ScanFiles("");
+                        ScanFiles("");          // 打印SD卡中所有文件名【可选】
                 }
                 else
-                    printf("FATfs error!\n");
+                    printf("$$$FATfs error!\n");       // 关闭文件的返回值异常
             }
             else
-                printf("FATfs init error while opening a file!\n");
+                printf("$$$FATfs init error while opening a file!\n");     // 打开文件的返回值异常
         }
+        else
+            printf("$$$FATfs mount error!\n");
     }
 }
 
@@ -169,27 +174,26 @@ static void ReadFile()
 
     if (Storage_Read_Request)
     {
-        if(Fatfs_restart == 1)
+        if(Fatfs_restart == 1)          // 文件系统需要重启
         {
-            if(Fatfs_OK == 1)
+            if(Fatfs_OK == 1)           // 文件系统重启成功
             {
-                ret = f_open(Storage_Read_pFile, currentMusicPath, FA_READ);
+                ret = f_open(Storage_Read_pFile, currentMusicPath, FA_READ);        // 重新打开文件
                 if(ret == FR_OK)
                 {
-                    Fatfs_restart = 0;          // 重启成功
+                    Fatfs_restart = 0;          // 重启成功，清空文件系统重启标识
                     printf("Fatfs restart ok!\n");
-                    f_lseek(Storage_Read_pFile, Storage_Read_fptr);     // 移动文件指针
+
+                    f_lseek(Storage_Read_pFile, Storage_Read_fptr);                 // 重新移动文件指针
                 }
                 else
-                {
-                    printf("Fatfs restart failed!\n");
-                    return;                 // 继续重启
-                }
+                    return;
             }
             else
-                return;                     // 继续重启
+                return;                         // 重启失败，继续重启
         }
 
+        // 读文件
         ret = f_read(Storage_Read_pFile, Storage_Read_pBuffer, Storage_Read_uiSize, &Storage_Read_uiNum);
         if (ret != FR_OK) // 读失败，表示文件系统损坏，需要重新初始化
         {
@@ -200,6 +204,32 @@ static void ReadFile()
             Storage_Read_Request = 0; // 读成功，清零请求标志
     }
 }
+
+
+
+
+
+/**
+ * @brief  在 Storage 线程中进行读写
+ * @param  FIL*     fp
+ * @param  uint64_t offset
+ * @param  void*    buff
+ * @param  uint32_t size
+ * @retval None
+ */
+void Storage_Thread_Read(FIL *fp, uint64_t offset, void *buff, uint32_t size)
+{
+    if(Storage_Read_Request)         //等待上一次读完成
+        vTaskDelay(1);
+    Storage_Read_pFile = fp;
+    f_lseek(fp, Storage_Read_fptr = offset);
+    Storage_Read_pBuffer = buff;
+    Storage_Read_uiSize = size;
+    Storage_Read_Request = 1;
+}
+
+
+
 
 /**
  * @brief  扫描 SD 卡指定目录下所有文件
@@ -249,3 +279,7 @@ static FRESULT ScanFiles(char *path)
     }
     return res;
 }
+
+
+
+

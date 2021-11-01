@@ -15,12 +15,12 @@
 
 
 /* Defines ------------------------------------------------------------------*/
-#define TIM_CLOCK           108000000            // APB1 的频率，即 TIM 的时钟频率
-#define DMA_BATCH           1024                 // DMA 一次传送的数据量
-#define WAV_HEADER_PRINT    0                   // 打印 wav 文件头信息
-#define SD_READ_BATCH       WAV_PLAYER_BUFFER_SIZE    // 一次读写 SD 卡 64KB 的内容 
+#define TIM_CLOCK           108000000                // APB1 的频率，即 TIM 的时钟频率
+#define DMA_BATCH           1024                     // DMA 一次传送的数据量
+#define WAV_HEADER_PRINT    0                       // 打印 wav 文件头信息
+#define SD_READ_BATCH       WAV_PLAYER_BUFFER_SIZE   // 一次读写 SD 卡 64KB 的内容 
 
-#define FFT_DATA_POINTS     256                  // 32 点大约可以cover 6K 的范围
+#define FFT_DATA_POINTS     256                      // 32 点大约可以cover 6K 的范围
 
 
 
@@ -30,8 +30,11 @@
 static void MusicThread(void *argument);
 static void PlayMusic();
 static void PlayWavMusic(char * fileName);
-static void Storage_Thread_Read(FIL *fp, uint64_t offset, void *buff, uint32_t size);
 static void WavCacheUpdate();
+static void PlayNextMusic();
+static void CalculateMusicFFT();
+
+extern void Storage_Thread_Read(FIL *fp, uint64_t offset, void *buff, uint32_t size);
 
 
 
@@ -42,17 +45,15 @@ U16             Music_Play_Start = 0;            // 音乐开始标志
 U16             Music_Play_Restart = 0;          // 音乐重播标志
 U16             Music_Play_On  = 0;              // 音乐播放中标志
 U16             Music_Thread_Exist = 0;          // 音乐线程启动标志
-extern U16      Music_Item_Current;             // 当前播放音乐 index
-char            currentMusicPath[100];              // 当前正在播放音乐的文件路径
-extern char     musicPath[100];                     // 音乐文件路径
-extern WM_HWIN  hListView;
-extern uint16_t Storage_Read_Request;
+char            currentMusicPath[100];           // 当前正在播放音乐的文件路径
+extern char     musicPath[100];                  // 音乐文件路径
+
 
 
 FIL             wavFile;
 uint8_t*        ucWavData = (uint8_t *)(WAV_PLAYER_BUFFER);            // 在 sdram 中存储歌曲 PCM 数据
 uint32_t        uiPuleseBuf[DMA_BATCH];         // TIM5 CH4 的 PWM 占空比信息
-uint32_t        uiAutoReload_TIM5;                     // TIM5 的 autoreload
+uint32_t        uiAutoReload_TIM5;              // TIM5 的 autoreload
 uint32_t        uiWavPlayIndex;                 // ucWavData 的 index，即当前播放位置
 uint64_t        ulWavPcmStart;                  // wav 文件 PCM 数据的起始位置
 uint32_t        uiWavDataLength;                // wav 文件的 PCM 数据长度
@@ -75,10 +76,11 @@ float32_t       fMusic_FFT_Data[FFT_DATA_POINTS * 2];       // 音乐频谱 FFT 
 float32_t       fMusic_FFT_Mag[FFT_DATA_POINTS / 2];        // 音乐频谱 FFT 幅值
 uint16_t        Music_FFT_Ready = 0;                        // 音乐频谱 FFT 结果就绪
 
-extern uint16_t  *audio_record_buffer_sdram;
-extern uint32_t  audio_record_buffer_len;
-extern uint32_t  audio_record_buffer_index;
-extern uint16_t  Audio_Record_Replay;
+// 播放录音相关
+extern uint16_t  *audio_record_buffer_sdram;        // 存储在 SDRAM 中的录音数据
+extern uint32_t  audio_record_buffer_len;           // 数据总长度
+extern uint32_t  audio_record_buffer_index;         // 当前播放位置指示
+extern uint16_t  Audio_Record_Replay;   
 extern uint16_t  Audio_Full_Record;
 
 
@@ -140,7 +142,7 @@ static void MusicThread(void *argument)
         WavCacheUpdate();
 
 
-        // 如果没有在音乐播放界面且后台没有播放音乐，终止线程以回收资源
+        // 如果没有在音乐播放界面且后台没有播放音乐，终止音乐线程以回收资源
         if(hCurrentWindow != hMusicWindow && Music_Play_On == 0)
         {
             Music_Thread_Exist = 0;
@@ -152,7 +154,7 @@ static void MusicThread(void *argument)
 #endif
         }
 
-        osDelay(2);
+        vTaskDelay(2);
     }
 }
 
@@ -172,8 +174,6 @@ static void PlayMusic()
         if (strcmp(musicPath, currentMusicPath) != 0 || Music_Play_Restart == 1)        // 新歌曲播放
         {
             Music_Play_Restart = 0;
-            while(Storage_Read_Request)
-                osDelay(1);
             f_close(&wavFile);
             strcpy(currentMusicPath, musicPath);
             PlayWavMusic(currentMusicPath);
@@ -266,9 +266,8 @@ static void WavCacheUpdate()
         if (usWavCacheInvalid == 1)         // 缓存失效事件，立即更新所有缓存
         {
             usWavCacheInvalid = 0;
-            usWavCacheHalfUsed = (uiWavPlayIndex % SD_READ_BATCH) * 2 / SD_READ_BATCH > 0 ?
-                                    1 : 0;
-            offset = uiWavPlayIndex - (uiWavPlayIndex % SD_READ_BATCH);
+            usWavCacheHalfUsed = (uiWavPlayIndex % SD_READ_BATCH) * 2 / SD_READ_BATCH > 0 ? 1 : 0;
+            offset = ulWavPcmStart + uiWavPlayIndex - (uiWavPlayIndex % SD_READ_BATCH);
             size = offset + SD_READ_BATCH > uiWavDataLength ?
                             uiWavDataLength - offset : SD_READ_BATCH;
             Storage_Thread_Read(&wavFile, offset, ucWavData, size);
@@ -278,7 +277,7 @@ static void WavCacheUpdate()
             if (usWavCacheHalfUsed == 0 && (uiWavPlayIndex % SD_READ_BATCH) * 2 / SD_READ_BATCH > 0)
             {
                 usWavCacheHalfUsed = 1;
-                offset = uiWavPlayIndex - (uiWavPlayIndex % SD_READ_BATCH) + SD_READ_BATCH;
+                offset = ulWavPcmStart + uiWavPlayIndex - (uiWavPlayIndex % SD_READ_BATCH) + SD_READ_BATCH;
                 size = offset + SD_READ_BATCH / 2 > uiWavDataLength ?
                             uiWavDataLength - offset : SD_READ_BATCH / 2;
                 Storage_Thread_Read(&wavFile, offset, ucWavData, size);
@@ -287,7 +286,7 @@ static void WavCacheUpdate()
             if (usWavCacheHalfUsed == 1 && (uiWavPlayIndex % SD_READ_BATCH) * 2 / SD_READ_BATCH == 0)
             {
                 usWavCacheHalfUsed = 0;
-                offset = uiWavPlayIndex - (uiWavPlayIndex % SD_READ_BATCH) + SD_READ_BATCH / 2;
+                offset = ulWavPcmStart + uiWavPlayIndex - (uiWavPlayIndex % SD_READ_BATCH) + SD_READ_BATCH / 2;
                 size = offset + SD_READ_BATCH / 2 > uiWavDataLength ?
                             uiWavDataLength - offset : SD_READ_BATCH / 2;
                 Storage_Thread_Read(&wavFile, offset, ucWavData + SD_READ_BATCH / 2, size);
@@ -296,6 +295,37 @@ static void WavCacheUpdate()
     }
 }
 
+
+
+
+
+
+/**
+ * @brief  DMA 传输一半时的中断
+ * @param  TIM_HandleTypeDef *htim
+ * @retval None
+ */
+void HAL_TIM_PWM_PulseFinishedHalfCpltCallback(TIM_HandleTypeDef *htim)
+{
+    static uint32_t i;
+
+    if(htim->Instance == TIM5)
+    {
+        if(Audio_Record_Replay == 0)                                    // 播放歌曲
+        {
+            for (i = 0; i < DMA_BATCH / 2; i++)         // 填充前一半缓冲【双缓冲】
+                uiPuleseBuf[i] = uiAutoReload_TIM5 * ucWavData[(uiWavPlayIndex += uiWavChannelNum) % SD_READ_BATCH] / uiMusicCofficient;
+
+            // 准备 FFT 数据
+            CalculateMusicFFT();
+        }
+        else if(Audio_Record_Replay == 1 && Audio_Full_Record == 1)         // 播放录音
+        {
+            for (i = 0; i < DMA_BATCH / 2; i++)     // 填充前一半缓冲【双缓冲】
+                uiPuleseBuf[i] = uiAutoReload_TIM5 * audio_record_buffer_sdram[audio_record_buffer_index++] / 0xfff;
+        }
+    }
+}
 
 
 
@@ -310,93 +340,78 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 
     if(htim->Instance == TIM5)
     {
-        if (Audio_Record_Replay == 0)
+        if (Audio_Record_Replay == 0)                                   // case 1: 播放歌曲
         {
-            if (uiWavPlayIndex < uiWavDataLength && Music_Play_On)
+            if (uiWavPlayIndex < uiWavDataLength && Music_Play_On)          // cond 1: 歌曲尚未结束，继续播放
                 HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);
-            else
+            else                                                            // cond 2: 当前歌曲结束，播放下一首或暂停
             {
                 HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_4);
-                if (Music_Play_On)
-                {
-                    f_close(&wavFile);
-                    Music_Play_Start = 1;
-                    if (LISTVIEW_GetNumRows(hListView) != 0)
-                    {
-                        Music_Item_Current = (Music_Item_Current + 1) % LISTVIEW_GetNumRows(hListView);
-                        LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100); // 下一首
-                    }
-                }
+                PlayNextMusic();
             }
 
             uiMusicCofficient = ((1 << uiWavSampleDepth) - 1) * uiMusicVolumeD / uiMusicVolumeN;
-            for (i = DMA_BATCH / 2; i < DMA_BATCH; i++)
+            for (i = DMA_BATCH / 2; i < DMA_BATCH; i++)         // 填充后一半缓冲【双缓冲】
                 uiPuleseBuf[i] = uiAutoReload_TIM5 * ucWavData[(uiWavPlayIndex += uiWavChannelNum) % SD_READ_BATCH] / uiMusicCofficient;
         }
-        else if(Audio_Record_Replay == 1 && Audio_Full_Record == 1)
+        else if(Audio_Record_Replay == 1 && Audio_Full_Record == 1)       // case 2: 播放录音
         {
-            if (audio_record_buffer_index < audio_record_buffer_len && Audio_Record_Replay)
+            if (audio_record_buffer_index < audio_record_buffer_len && Audio_Record_Replay)     // cond 1: 录音尚未结束，继续播放
                 HAL_TIM_PWM_Start_DMA(&htim5, TIM_CHANNEL_4, uiPuleseBuf, DMA_BATCH);
-            else
+            else                                                                                // cond 2: 当前录音结束，暂停 PWM
                 HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_4);
-            for (i = DMA_BATCH / 2; i < DMA_BATCH; i++)
+
+            for (i = DMA_BATCH / 2; i < DMA_BATCH; i++)         // 填充后一半缓冲【双缓冲】
                 uiPuleseBuf[i] = uiAutoReload_TIM5 * audio_record_buffer_sdram[audio_record_buffer_index++] / 0xfff;
         }
     }
 }
+
+
+
+
 
 
 /**
- * @brief  DMA 传输一半时的中断
- * @param  TIM_HandleTypeDef *htim
+ * @brief  计算音乐播放器界面的音乐频谱数据
+ * @param  None
  * @retval None
  */
-void HAL_TIM_PWM_PulseFinishedHalfCpltCallback(TIM_HandleTypeDef *htim)
+static void CalculateMusicFFT()
 {
     static uint32_t i;
 
-    if(htim->Instance == TIM5)
+    for (i = 0; i < FFT_DATA_POINTS; i++)
     {
-        if(Audio_Record_Replay == 0)
-        {
-            for (i = 0; i < DMA_BATCH / 2; i++)
-                uiPuleseBuf[i] = uiAutoReload_TIM5 * ucWavData[(uiWavPlayIndex += uiWavChannelNum) % SD_READ_BATCH] / uiMusicCofficient;
-
-            // 准备 FFT 数据
-            for (i = 0; i < FFT_DATA_POINTS; i++)
-            {
-                fMusic_FFT_Data[2 * i] = uiPuleseBuf[i];
-                fMusic_FFT_Data[2 * i + 1] = 0;
-            }
-            arm_cfft_f32(&arm_cfft_sR_f32_len256, fMusic_FFT_Data, 0, 1);
-            arm_cmplx_mag_f32(fMusic_FFT_Data, fMusic_FFT_Mag, 128);
-            fMusic_FFT_Mag[0] /= 2;
-            Music_FFT_Ready = 1;
-        }
-        else if(Audio_Record_Replay == 1 && Audio_Full_Record == 1)
-        {
-            for (i = 0; i < DMA_BATCH / 2; i++)
-                uiPuleseBuf[i] = uiAutoReload_TIM5 * audio_record_buffer_sdram[audio_record_buffer_index++] / 0xfff;
-        }
+        fMusic_FFT_Data[2 * i] = uiPuleseBuf[i];
+        fMusic_FFT_Data[2 * i + 1] = 0;
     }
+    arm_cfft_f32(&arm_cfft_sR_f32_len256, fMusic_FFT_Data, 0, 1);
+    arm_cmplx_mag_f32(fMusic_FFT_Data, fMusic_FFT_Mag, 128);
+    fMusic_FFT_Mag[0] /= 2;
+    Music_FFT_Ready = 1;
 }
 
 
 
-static void Storage_Thread_Read(FIL *fp, uint64_t offset, void *buff, uint32_t size)
+/**
+ * @brief  如果 Music_Play_On 为 1，在当前歌曲播放结束后选择下一首继续播放
+ * @param  None
+ * @retval None
+ */
+static void PlayNextMusic()
 {
-    extern FIL *Storage_Read_pFile;
-    extern uint8_t *Storage_Read_pBuffer;
-    extern uint32_t Storage_Read_uiSize;
-    extern uint32_t Storage_Read_uiNum;
-    extern uint16_t Storage_Read_Request;
-    extern uint32_t Storage_Read_fptr;
-    
-    while(Storage_Read_Request)         //等待上一次读完成
-        osDelay(1);
-    Storage_Read_pFile = fp;
-    f_lseek(fp, Storage_Read_fptr = ulWavPcmStart + offset);
-    Storage_Read_pBuffer = buff;
-    Storage_Read_uiSize = size;
-    Storage_Read_Request = 1;
+    extern U16      Music_Item_Current;             // 当前播放音乐 index
+    extern WM_HWIN  hListView;              // 音乐列表的句柄
+
+    if (Music_Play_On)
+    {
+        f_close(&wavFile);
+        Music_Play_Start = 1;
+        if (LISTVIEW_GetNumRows(hListView) != 0)
+        {
+            Music_Item_Current = (Music_Item_Current + 1) % LISTVIEW_GetNumRows(hListView);
+            LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100); // 下一首
+        }
+    }
 }

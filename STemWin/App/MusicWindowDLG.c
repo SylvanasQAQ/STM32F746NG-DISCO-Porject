@@ -92,8 +92,8 @@ extern char            AlarmSongPath[128];          // 闹钟歌曲路径
 
 U16                    Music_Item_Current = 0;
 char                   musicPath[100];
-static uint16_t               sliderClicked = 0;
-static uint16_t               Timer_Exist = 0;
+static uint16_t        sliderClicked = 0;
+static uint16_t        Timer_Exist = 0;
 // USER END
 
 /*********************************************************************

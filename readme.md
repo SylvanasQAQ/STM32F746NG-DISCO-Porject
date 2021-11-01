@@ -1,8 +1,8 @@
 # 1. 前言
 
 工程由 `CubeMX 5.3.0` 生成，建议使用相同版本的 CubeMX 生成工程，
-因为高版本的 CubeMX 不再支持 emWin，所以用高版本 CubeMX 打开
-工程会导致 emWin 相关文件丢失  :warning:
+因为高版本的 CubeMX 不再支持 emWin，所以用高版本 CubeMX 
+打开工程会导致 emWin 相关文件丢失  :warning:
 
 
 
@@ -122,6 +122,7 @@ void testDSP()
 ### SD 卡写入
 
 ```c
+// 警告：此测试会破坏 SD 卡的文件系统
 HAL_StatusTypeDef status;
 uint8_t txBuf[512];
 for(int i = 0; i < 512; i++)

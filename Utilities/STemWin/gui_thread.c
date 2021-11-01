@@ -65,7 +65,7 @@ const osThreadAttr_t guiTask_attributes = {
 void vGUITaskCreate()
 {
 #ifdef CMSIS_V1
-	xTaskCreate(GUIThread, "GUI Task", 824, NULL, osPriorityLow, &guiTaskHandle);
+	xTaskCreate(GUIThread, "GUI Task", 824, NULL, (UBaseType_t)osPriorityLow, &guiTaskHandle);
 #endif
 
 #ifdef CMSIS_V2
