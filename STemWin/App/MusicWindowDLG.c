@@ -531,6 +531,27 @@ static void PlayButtonEventHandler(WM_MESSAGE * pMsg)
   }
 }
 
+void MusicWindowPlayButtonHit(WM_HWIN hWin)
+{
+  if (LISTVIEW_GetNumRows(hListView) > 0)
+  {
+    Music_Item_Current = LISTVIEW_GetSel(hListView);
+    if (Music_Item_Current == 0xffff)     // 未选中任何 row
+      Music_Item_Current = 0;             // 默认播放第一个文件
+
+    LISTVIEW_SetSel(hListView, Music_Item_Current);
+
+    LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);     // 获取文件全路径
+
+    Music_Play_Start = 1;         // 置位播放标志
+    vMusicTaskCreate();         // 启动音乐线程
+    if(!Timer_Exist){
+      Timer_Exist = 1;
+      WM_CreateTimer(hWin, 0, 100, 0);
+    }
+  }
+}
+
 
 /**
  * @brief  Next 按键的回调函数
@@ -581,11 +602,11 @@ static void TimerCallbackHandler(WM_MESSAGE * pMsg)
   static uint16_t      msCount = 0;
   static const  GUI_RECT DrawingRect = {0, 0, 252, 130};
 
-  msCount += 5;
+  msCount += 20;
   if(Music_FFT_Ready)
     WM_InvalidateRect(pMsg->hWin, &DrawingRect);
 
-  if(msCount >= 300)
+  if(msCount >= 200)
   {
     msCount = 0;
     secondCount++;
@@ -617,7 +638,7 @@ static void TimerCallbackHandler(WM_MESSAGE * pMsg)
 
   if(Music_Thread_Exist){
 #ifdef CMSIS_V1
-    WM_RestartTimer(pMsg->Data.v, 5);
+    WM_RestartTimer(pMsg->Data.v, 20);
 #endif
 
 #ifdef CMSIS_V2

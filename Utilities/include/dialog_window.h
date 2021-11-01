@@ -17,6 +17,7 @@ typedef uint16_t    DIALOG_TYPE;
 
 #define DIALOG_NOTHING         0
 #define DIALOG_ALARM           1
+#define DIALOG_REBOOT          2
 
 
 

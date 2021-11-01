@@ -173,7 +173,7 @@ static void PlayMusic()
 
         if (strcmp(musicPath, currentMusicPath) != 0 || Music_Play_Restart == 1)        // 新歌曲播放
         {
-            Music_Play_Restart = 0;
+            Music_Play_Restart = Music_Play_Restart == 1 ? 0 : Music_Play_Restart;      // 仅在 Music_Play_Restart = 1 的情况下清空标志
             f_close(&wavFile);
             strcpy(currentMusicPath, musicPath);
             PlayWavMusic(currentMusicPath);
@@ -206,7 +206,13 @@ static void PlayWavMusic(char * fileName)
     FRESULT             fatfs_ret;
     WaveHeader_t        wavHeader;
     
-    uiWavPlayIndex = 0;
+    if(Music_Play_Restart == 2)         // Music_Play_Restart = 2 时，uiWavPlayIndex 已经被初始化过了，不需要设置为 0
+    {
+        usWavCacheInvalid = 1;
+        Music_Play_Restart = 0;
+    }
+    else
+        uiWavPlayIndex = 0;
     usWavCacheHalfUsed = 0;
 
     fatfs_ret = f_open(&wavFile, fileName, FA_READ);

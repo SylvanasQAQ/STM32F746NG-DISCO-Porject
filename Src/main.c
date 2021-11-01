@@ -96,7 +96,7 @@ void vLCDTimerCraete();
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-// printf �?定�?�到串�?�
+// printf �?定�?�到串�?�
 int fputc(int ch, FILE *f)
 {
   HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xffff);
@@ -164,8 +164,8 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM12_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim12);     // 开�?� TIM 12 的中断，用于更新系统时间
-  BSP_SDRAM_Init();                   // �?始化 SDRAM
+  HAL_TIM_Base_Start_IT(&htim12);     // 开�?� TIM 12 的中断，用于更新系统时间
+  BSP_SDRAM_Init();                   // �?始化 SDRAM
   /* USER CODE END 2 */
 
 /* Initialise the graphical hardware */
@@ -188,7 +188,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
-  vLCDTimerCraete();                    // �?�动触摸�?检测定时器 (RTOS 软定时) 
+  vLCDTimerCraete();                    // �?�动触摸�?检测定时器 (RTOS 软定时) 
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -205,10 +205,10 @@ int main(void)
   osThreadTerminate(defaultTaskHandle);
   #endif
   /* add threads, ... */
-  vGUITaskCreate();                     // �?�动 GUI task
-  vStorageTaskCreate();                 // �?�动存储线程，对 SD �?�进行�?始化
+  vStorageTaskCreate();                 // �?�动存储线程，对 SD �?�进行�?始化
+  vGUITaskCreate();                     // �?�动 GUI task
   #ifdef CMSIS_V1
-  vTaskStartScheduler();                // 开�?�任务调度器 (RTOS)
+  vTaskStartScheduler();                // 开�?�任务调度器 (RTOS)
   #endif
   //
   /* USER CODE END RTOS_THREADS */
@@ -220,7 +220,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  // 正常情况下永远都�?会�?行到这里
+  // 正常情况下永远都�?会�?行到这里
   while (1)
   {
     osDelay(100);

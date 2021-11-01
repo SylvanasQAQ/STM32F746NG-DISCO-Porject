@@ -69,14 +69,17 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-#define LCD_FRAME_BUFFER          SDRAM_DEVICE_ADDR
-#define WAV_PLAYER_BUFFER     ((uint32_t)(LCD_FRAME_BUFFER + 0x40000))
+#define LCD_FRAME_BUFFER          ((uint32_t)SDRAM_DEVICE_ADDR)
+#define LCD_FRAME_BUFFER_SIZE     0x40000
 
+#define WAV_PLAYER_BUFFER         ((uint32_t)LCD_FRAME_BUFFER + LCD_FRAME_BUFFER_SIZE)
 #define WAV_PLAYER_BUFFER_SIZE     0x20000
 
-#define AUDIO_RECORD_BUFFER   (WAV_PLAYER_BUFFER + WAV_PLAYER_BUFFER_SIZE)
+#define AUDIO_RECORD_BUFFER       ((uint32_t)WAV_PLAYER_BUFFER + WAV_PLAYER_BUFFER_SIZE)
 #define AUDIO_RECORD_BUFFER_SIZE   0x200000
 
+#define REBOOT_STORAGE_AREA       ((uint32_t)AUDIO_RECORD_BUFFER + AUDIO_RECORD_BUFFER_SIZE)
+#define REBOOT_STORAGE_AREA_SIZE   0x8000
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);

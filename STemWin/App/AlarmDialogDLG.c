@@ -62,7 +62,7 @@ static WM_HWIN       hAlarmDialog;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim5;
 extern WM_HWIN           hAlarmWindow;
-extern U16    Music_Play_On;              // 音乐播放中标志
+extern U16               Music_Play_On;              // 音乐播放中标志
 // USER END
 
 /*********************************************************************
@@ -203,6 +203,12 @@ WM_HWIN CreateAlarmDialog_Self(char * title, char * text, DIALOG_TYPE type) {
 
   WM_MakeModal(hWin);
   WM_SetStayOnTop(hWin, 1);
+
+  if(type == DIALOG_REBOOT)
+  {
+    BUTTON_SetText(WM_GetDialogItem(hWin, ID_BUTTON_0), "Reboot");
+    BUTTON_SetTextColor(WM_GetDialogItem(hWin, ID_BUTTON_0), 0, GUI_RED);
+  }
   return hWin;
 }
 
@@ -219,6 +225,9 @@ static void ButtonEventProcess(WM_HWIN hWin)
       HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_4);
     MoveToAlarmWindow(hAlarmWindow);
   }
+
+  if(dialog_type & DIALOG_REBOOT)
+    NVIC_SystemReset();
 
   if(DIALOG_TOP_EXIST == 1){
     WM_SetStayOnTop(hStayOnTopWindow, 1);

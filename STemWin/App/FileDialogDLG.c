@@ -278,6 +278,13 @@ static void AddFilesToMusicPlayerList(WM_HWIN hWin)
   uint16_t              len, i;
   FIL                   fp;
   WaveHeader_t          wavHeader;
+  extern uint16_t       Storage_Fatfs_OK;       // FAT 文件系统是否初始化成功
+
+  if(Storage_Fatfs_OK == 0)
+  {
+    CreateAlarmDialog_Self("FATfs ERROR", "Check your SD card!", DIALOG_NOTHING);
+    return;
+  }
 
   hTree = WM_GetDialogItem(hWin, ID_TREEVIEW_0);
   TREEVIEW_ITEM_GetText(hTreeItemCur = TREEVIEW_GetSel(hTree), (unsigned char*)trackBuf, 100);
