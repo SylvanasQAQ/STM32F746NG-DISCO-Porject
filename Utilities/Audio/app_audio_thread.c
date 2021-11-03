@@ -213,7 +213,7 @@ static void HardwareInit()
         __HAL_TIM_SetAutoreload(&htim2, TIM2_FULL_RECORD_AUTORELOAD);       // Fs = 40K Hz  
     else
         __HAL_TIM_SetAutoreload(&htim2, TIM2_AUTORELOAD);                   // Fs = 8K Hz
-    __HAL_TIM_SET_PRESCALER(&htim2, TIM2_PRESCALER);
+    __HAL_TIM_SET_PRESCALER(&htim2, TIM2_PRESCALER-1);
     __HAL_TIM_SetCounter(&htim2, 0);
 
     HAL_ADC_Start_IT(&hadc3);

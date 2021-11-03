@@ -45,7 +45,6 @@ GUI_HWIN hFileDialog;
 
 
 
-
 /* Function implementations -----------------------------------------------------------*/
 #ifdef CMSIS_V1
 TaskHandle_t guiTaskHandle;
@@ -118,7 +117,7 @@ static void GUIThread(void *argument)
 	while (1)
 	{
 		GUI_Exec(); 	/* Do the background work ... Update windows etc.) */
-		vTaskDelay(20); /* Nothing left to do for the moment ... Idle processing */
+		vTaskDelay(5); /* Nothing left to do for the moment ... Idle processing */
 	}
 }
 
@@ -168,7 +167,7 @@ char startup_image[20][100] = {
 "                           _ooOoo_                             ",
 "                          o8888888o                            ",
 "                          88' . '88                            ",
-"                          (| -_- |)                            ",
+"                          (| ^_^ |)                            ",
 "                          O\\  =  /O                            ",
 "                       ____/`---'\\____                         ",
 "                     .'  \\|     |//  `.                       ",

@@ -510,25 +510,10 @@ void MoveToMusicWindow(WM_HWIN hWin)
  * @param  WM_MESSAGE * pMsg
  * @retval None
  */
+void MusicWindowPlayButtonHit(WM_HWIN hWin);
 static void PlayButtonEventHandler(WM_MESSAGE * pMsg)
 {
-  if (LISTVIEW_GetNumRows(hListView) > 0)
-  {
-    Music_Item_Current = LISTVIEW_GetSel(hListView);
-    if (Music_Item_Current == 0xffff)     // 未选中任何 row
-      Music_Item_Current = 0;             // 默认播放第一个文件
-
-    LISTVIEW_SetSel(hListView, Music_Item_Current);
-
-    LISTVIEW_GetItemText(hListView, 0, Music_Item_Current, musicPath, 100);     // 获取文件全路径
-
-    Music_Play_Start = 1;         // 置位播放标志
-    vMusicTaskCreate();         // 启动音乐线程
-    if(!Timer_Exist){
-      Timer_Exist = 1;
-      WM_CreateTimer(pMsg->hWin, 0, 100, 0);
-    }
-  }
+  MusicWindowPlayButtonHit(pMsg->hWin);
 }
 
 void MusicWindowPlayButtonHit(WM_HWIN hWin)
@@ -737,8 +722,8 @@ static void DrawSpectrum(uint16_t x, uint16_t y)
                       y + maxVal - curValueArr[i],
                       x + deltaX,
                       y + maxVal,
-                      GUI_CYAN,
-                      GUI_MAGENTA);
+                      GUI_BLUE,
+                      GUI_BLUE);
 
     /* 显示顶值 */
     GUI_SetColor(GUI_DARKGREEN);

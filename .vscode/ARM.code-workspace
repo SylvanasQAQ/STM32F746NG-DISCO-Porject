@@ -48,7 +48,8 @@
 			"k_storage.h": "c",
 			"usb_device.h": "c",
 			"app_wavdecoder.h": "c",
-			"bsp_driver_sd.h": "c"
+			"bsp_driver_sd.h": "c",
+			"time.h": "c"
 		}
 	}
 }

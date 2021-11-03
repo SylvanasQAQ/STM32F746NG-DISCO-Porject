@@ -46,14 +46,8 @@ uint16_t        Storage_Thread_Exist = 0;       // Storage 线程是否正在运
 
 
 // 【用于重启】
-#ifdef CMSIS_V1
-osTimerId timer_reboot;
-#endif
-#ifdef CMSIS_V2
-osTimerId_t timer_reboot;
-#endif
-uint16_t Timer_Reboot_Exist = 0;
-
+uint16_t        Timer_Reboot_Exist = 0;
+extern uint16_t System_Restart_Request;
 
 
 
@@ -200,8 +194,8 @@ static void ReadFile()
                     GUI_EndDialog(hDialogWin, 0);       // 关闭窗口
                     if(Timer_Reboot_Exist)
                     {
-                        osTimerDelete(timer_reboot);
                         Timer_Reboot_Exist = 0;
+                        System_Restart_Request = 2;
                         memset((void*)REBOOT_STORAGE_AREA, 0, REBOOT_STORAGE_AREA_SIZE);
                     }
                     
@@ -263,7 +257,6 @@ static void SaveInfoBeforeReboot()
     extern char     musicPath[100];
     extern WM_HWIN  hListView;
     extern uint32_t uiWavPlayIndex;
-    extern U16      Music_Play_On;
 
     static uint16_t i, numRows;
     static char   buf[100];
@@ -273,7 +266,7 @@ static void SaveInfoBeforeReboot()
     if (Timer_Reboot_Exist == 0)
     {
         Timer_Reboot_Exist = 1;
-        vRebootTimerCraete();
+        System_Restart_Request = 1;
 
         memset(pRebootInfo, 0, REBOOT_STORAGE_AREA_SIZE);
         pRebootInfo->magic = 0x1234567887654321;
@@ -293,60 +286,6 @@ static void SaveInfoBeforeReboot()
     }
 }
 
-
-
-
-#ifdef CMSIS_V1
-/**
-  * @brief  Timer callback for `reboot` (5 s)
-  * @param  void *n: Timer index 
-  * @retval None
-  */
-static void RebootTimerCallback(const void *n)
-{  
-    if(Timer_Reboot_Exist == 1)
-    {
-        Timer_Reboot_Exist = 0;
-        osTimerDelete(timer_reboot);
-    }
-    NVIC_SystemReset();
-}
-#endif
-
-
-#ifdef CMSIS_V2
-/**
-  * @brief  Timer callback for `reboot` (5 s)
-  * @param  void *n: Timer index 
-  * @retval None
-  */
-static void RebootTimerCallback(void *n)
-{  
-    Timer_Reboot_Exist = 0;
-    NVIC_SystemReset();
-}
-#endif
-
-
-
-/**
- * @brief  创建一个重启定时器，计时 5s
- * @param  None
- * @retval None
- */
-static void vRebootTimerCraete()
-{
-#ifdef CMSIS_V1
-  osTimerDef(timer_reboot, RebootTimerCallback);
-  timer_reboot = osTimerCreate(osTimer(timer_reboot), osTimerPeriodic, NULL);
-  osTimerStart(timer_reboot, 3000);
-#endif
-
-#ifdef CMSIS_V2
-  timer_reboot = osTimerNew(RebootTimerCallback, osTimerPeriodic, NULL, NULL);
-  osTimerStart(timer_reboot, 3000);
-#endif
-}
 
 
 

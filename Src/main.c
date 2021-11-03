@@ -67,7 +67,7 @@ UART_HandleTypeDef huart1;
 
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
-
+uint16_t System_Restart_Request = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -559,7 +559,7 @@ static void MX_TIM3_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 3000;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
@@ -569,6 +569,7 @@ static void MX_TIM3_Init(void)
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim3);
 
 }
 
@@ -976,8 +977,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-  if(htim->Instance == TIM12)
+  static uint16_t count = 3;
+  if(htim->Instance == TIM12){
     updateSysTimeBySecond();
+    if(System_Restart_Request == 1)
+    {
+      count--;
+      if(count == 0)
+        NVIC_SystemReset();
+    }
+    else if(System_Restart_Request == 2)
+    {
+      count = 3;
+      System_Restart_Request = 0;
+    }
+  }
   /* USER CODE END Callback 1 */
 }
 
